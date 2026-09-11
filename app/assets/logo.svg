@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="100%" height="100%">
+  <!-- Title for accessibility -->
+  <title>Minimalist Bar Logo</title>
+
+  <!-- Background (optional - remove if you want a transparent background) -->
+  <rect id="background" width="100%" height="100%" fill="#f8f7f2" />
+
+  <!-- Logo Group -->
+  <g fill="#4a3018">
+    
+    <!-- Left Vertical Bar -->
+    <rect x="370" y="200" width="24" height="130" rx="6" ry="6" />
+
+    <!-- Right Horizontal Bars -->
+    <!-- Top Bar (Longest) -->
+    <rect x="418" y="200" width="260" height="22" rx="6" ry="6" />
+    
+    <!-- Middle Bar (Medium) -->
+    <rect x="418" y="254" width="195" height="22" rx="6" ry="6" />
+    
+    <!-- Bottom Bar (Shortest) -->
+    <rect x="418" y="308" width="133" height="22" rx="6" ry="6" />
+
+  </g>
+</svg>

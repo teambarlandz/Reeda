@@ -1,0 +1,82 @@
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+
+# Metro / React Native
+.expo/
+.expo-shared/
+.metro-health-check*
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs — never commit compiled apps per phase-5.md:3.1
+app/android/app/build/
+app/android/build/
+app/android/.gradle/
+app/android/app/release.keystore
+app/android/app/*.jks
+app/android/keystore.properties
+app/android/gradle.properties
+# Keep template gradle.properties but secrets are via GH Secrets + release.keystore (phase-5.md:3.4)
+!app/android/gradle.properties.template
+
+app/ios/build/
+app/ios/Pods/
+app/ios/*.xcworkspace
+app/ios/*.xcuserdata
+
+# JS build cache
+app/.jest/
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Temporary
+tmp/
+temp/
+.tmp/
+
+# Keep samples small — but do not ignore bundled public-domain samples per phase-1.md:4
+!app/assets/samples/
+
+# Docs images — keep reference images but ignore large exports
+# Keep logo + reference images at root per phase-2.md:8.2 #4
+!logo.svg
+!logo.png
+!603d5406845a0ef07254c5da1dbf5b1f.jpg
+!96cbcac3221fead42ec8cc721f981424.jpg
+!d7e01ac45f8fdd4a13b8296b4ef863b5.jpg
+
+# Private
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
