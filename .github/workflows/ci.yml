@@ -56,13 +56,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: app/package.json
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
       - run: npm ci
         working-directory: app
-      - run: ./gradlew assembleDebug --no-daemon
+      - name: Setup Gradle local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+        working-directory: app/android
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+        working-directory: app/android
+      - run: ./gradlew assembleDebug --no-daemon --stacktrace
         working-directory: app/android
 
   dead-code-check:
