@@ -40,3 +40,21 @@ jest.mock('lucide-react-native', () => {
   const MockIcon = (props) => React.createElement('Icon', props);
   return new Proxy({}, { get: () => MockIcon });
 });
+
+// Mock react-native-pdf and blob-util (native)
+jest.mock('react-native-pdf', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: (props) => React.createElement('PdfMock', props),
+  };
+});
+jest.mock('react-native-blob-util', () => ({}));
+jest.mock(
+  'react-native-keep-awake',
+  () => ({
+    activateKeepAwake: jest.fn(),
+    deactivateKeepAwake: jest.fn(),
+  }),
+  { virtual: true },
+);

@@ -10,12 +10,20 @@ type ReaderStore = {
   readingMode: 'scroll' | 'paginate';
   isFullscreen: boolean;
   pageTransition: 'slide' | 'fade' | 'curl' | 'none';
+  pdfDarkMode: boolean; // Option A per phase-3-reader.md:3.3 table
+  orientation: 'auto' | 'portrait' | 'landscape';
+  twoColumn: boolean;
+  screenTimeout: '1min' | '5min' | '15min' | 'never';
   setTheme: (t: ReaderStore['theme']) => void;
   setFontSize: (s: number) => void;
   setFontFamily: (f: ReaderStore['fontFamily']) => void;
   setReadingMode: (m: ReaderStore['readingMode']) => void;
   setFullscreen: (b: boolean) => void;
   setPageTransition: (t: ReaderStore['pageTransition']) => void;
+  setPdfDarkMode: (b: boolean) => void;
+  setOrientation: (o: ReaderStore['orientation']) => void;
+  setTwoColumn: (b: boolean) => void;
+  setScreenTimeout: (t: ReaderStore['screenTimeout']) => void;
 };
 
 export const useReaderStore = create<ReaderStore>(set => ({
@@ -27,10 +35,18 @@ export const useReaderStore = create<ReaderStore>(set => ({
   readingMode: 'scroll',
   isFullscreen: false,
   pageTransition: 'slide',
+  pdfDarkMode: false,
+  orientation: 'auto',
+  twoColumn: false,
+  screenTimeout: 'never',
   setTheme: theme => set({ theme }),
   setFontSize: fontSize => set({ fontSize }),
   setFontFamily: fontFamily => set({ fontFamily }),
   setReadingMode: readingMode => set({ readingMode }),
   setFullscreen: isFullscreen => set({ isFullscreen }),
   setPageTransition: pageTransition => set({ pageTransition }),
+  setPdfDarkMode: pdfDarkMode => set({ pdfDarkMode }),
+  setOrientation: orientation => set({ orientation }),
+  setTwoColumn: twoColumn => set({ twoColumn }),
+  setScreenTimeout: screenTimeout => set({ screenTimeout }),
 }));

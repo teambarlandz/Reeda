@@ -1,15 +1,33 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
-import { X } from '../../../shared/icons';
+import { X, Sun, Moon } from '../../../shared/icons';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { typography, spacing, radius } from '../../../shared/theme/tokens';
 import { useReaderStore } from '../store/readerStore';
+import { Toggle } from '../../../shared/ui';
 
 type Props = { visible: boolean; onClose: () => void };
 
 export function ThemePanel({ visible, onClose }: Props) {
   const t = useAppTheme();
-  const { theme, setTheme, fontSize, setFontSize, fontFamily, setFontFamily, readingMode, setReadingMode } = useReaderStore();
+  const {
+    theme,
+    setTheme,
+    fontSize,
+    setFontSize,
+    fontFamily,
+    setFontFamily,
+    readingMode,
+    setReadingMode,
+    pdfDarkMode,
+    setPdfDarkMode,
+    orientation,
+    setOrientation,
+    twoColumn,
+    setTwoColumn,
+    screenTimeout,
+    setScreenTimeout,
+  } = useReaderStore();
   if (!visible) return null;
 
   return (
@@ -79,6 +97,50 @@ export function ThemePanel({ visible, onClose }: Props) {
               </Pressable>
             </View>
           </View>
+
+          <View>
+            <Text style={[typography.title, { color: t.textPrimary }]}>PDF Dark Mode (Option A)</Text>
+            <View style={styles.row}>
+              <Toggle value={pdfDarkMode} onValueChange={setPdfDarkMode} testID="pdf-dark-toggle" />
+              <Text style={[typography.body, { color: t.textSecondary, marginLeft: spacing.sm, flex: 1 }]}>
+                Dark mode for PDFs — simple invert. Images may appear inverted. Turn off if photos look wrong.
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm }}>
+              <Moon size={16} color={t.iconTint} />
+              <Text style={[typography.caption, { color: t.textSecondary, marginLeft: 4 }]}>Applies only when dark theme selected</Text>
+            </View>
+          </View>
+
+          <View>
+            <Text style={[typography.title, { color: t.textPrimary }]}>Orientation</Text>
+            <View style={styles.row}>
+              {(['auto', 'portrait', 'landscape'] as const).map(o => (
+                <Pressable key={o} onPress={() => setOrientation(o)} style={[styles.pill, { backgroundColor: orientation === o ? t.bgCardDark : t.bgSearch }]}>
+                  <Text style={[typography.caption, { color: orientation === o ? t.textInverse : t.textSecondary }]}>{o}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.row}>
+              <Text style={[typography.caption, { color: t.textSecondary }]}>Two-column in landscape</Text>
+              <Toggle value={twoColumn} onValueChange={setTwoColumn} testID="two-column-toggle" />
+            </View>
+          </View>
+
+          <View>
+            <Text style={[typography.title, { color: t.textPrimary }]}>Screen Timeout (Fullscreen)</Text>
+            <View style={styles.row}>
+              {(['1min', '5min', '15min', 'never'] as const).map(v => (
+                <Pressable key={v} onPress={() => setScreenTimeout(v)} style={[styles.pill, { backgroundColor: screenTimeout === v ? t.bgCardDark : t.bgSearch }]}>
+                  <Text style={[typography.caption, { color: screenTimeout === v ? t.textInverse : t.textSecondary }]}>{v}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          <Pressable onPress={onClose} style={[styles.doneBtn, { backgroundColor: t.textPrimary }]} testID="theme-done">
+            <Text style={[typography.button, { color: t.bgCard }]}>Done</Text>
+          </Pressable>
         </ScrollView>
       </View>
     </View>
@@ -89,9 +151,10 @@ const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, flexDirection: 'column', justifyContent: 'flex-end', zIndex: 25 },
   panel: { maxHeight: '80%', width: '100%' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg, height: 56 },
-  row: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, flexWrap: 'wrap' },
+  row: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm, flexWrap: 'wrap', alignItems: 'center' },
   swatch: { width: 56, height: 40, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center' },
   pill: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full },
   btn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#D9D4CC' },
   slider: { flex: 1, height: 4, borderRadius: 8, alignSelf: 'center' },
+  doneBtn: { marginTop: spacing.xl, height: 40, borderRadius: radius.full, justifyContent: 'center', alignItems: 'center' },
 });

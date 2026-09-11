@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { typography, spacing } from '../../../shared/theme/tokens';
@@ -15,6 +15,7 @@ import { ReadingToolbar } from '../toolbar/ReadingToolbar';
 import { FullscreenController } from '../modes/FullscreenController';
 import { ScrollMode } from '../modes/ScrollMode';
 import { PaginateMode } from '../modes/PaginateMode';
+import { PdfView } from '../../../parsing/pdf/PdfView';
 import { TOCPanel } from '../panels/TOCPanel';
 import { PagesGrid } from '../panels/PagesGrid';
 import { ProgressStrip } from '../panels/ProgressStrip';
@@ -152,18 +153,26 @@ export function ReaderScreen() {
 
   // Fullscreen hide menu handling per phase-3-reader.md:3.1
   const isFullscreen = useReaderStore(s => s.isFullscreen);
+  const orientation = useReaderStore(s => s.orientation);
+  const { width, height } = useWindowDimensions();
+  const isLandscapeSystem = width > height;
+  // Respect orientation lock per phase-3-reader.md:3.1 — auto respects system, locked overrides
+  const isLandscape = orientation === 'landscape' ? true : orientation === 'portrait' ? false : isLandscapeSystem;
+  const isPdf = book?.format === 'pdf';
 
   return (
     <FullscreenController>
-      <View style={[styles.root, { backgroundColor: t.bgPrimary }]} testID="reader-screen">
-        {/* Menu */}
-        {!isFullscreen && <RectangularMenu onSelect={handleMenuSelect} />}
+      <View style={[styles.root, { backgroundColor: t.bgPrimary, flexDirection: isLandscape ? 'row' : 'row' }]} testID="reader-screen">
+        {/* Menu — hidden in fullscreen, also hidden if window <360dp per phase-3-reader.md:3.1 edge case */}
+        {!isFullscreen && width >= 360 && <RectangularMenu onSelect={handleMenuSelect} />}
 
         {/* Content */}
         <View style={styles.contentWrap}>
           {/* Tap center to toggle toolbar/chrome */}
           <Pressable style={styles.content} onPress={() => setToolbarVisible(v => !v)} testID="reader-content-tap">
-            {readingMode === 'scroll' ? (
+            {isPdf ? (
+              <PdfView source={{ uri: book?.filePath ?? '' }} page={currentPage} onPageChanged={(p, n) => handleScrub(p / n)} hasTextLayer={true} />
+            ) : readingMode === 'scroll' ? (
               <ScrollMode chapters={parsedChapters} onScroll={handleScroll} scrollRef={scrollRef} />
             ) : (
               <PaginateMode chapters={parsedChapters} initialPage={currentPage} onPageChange={page => savePosition({ currentPage: page, progressPercent: page / totalPages })} />
