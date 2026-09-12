@@ -11,6 +11,7 @@ import {
   Highlighter,
   Pencil,
   Volume2,
+  VolumeX,
   Search,
   Type,
   Rows3,
@@ -24,14 +25,16 @@ import {
 
 type Props = {
   onSelect: (item: string) => void;
+  ttsActive?: boolean;
+  ttsDisabled?: boolean;
 };
 
-const ITEMS: Array<{ key: string; label: string; icon: any }> = [
+const ITEMS: Array<{ key: string; label: string; icon: any; disabledIcon?: any }> = [
   { key: 'chapters', label: 'Chapters', icon: BookOpen },
   { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark },
   { key: 'highlights', label: 'Highlights', icon: Highlighter },
   { key: 'notes', label: 'Notes', icon: Pencil },
-  { key: 'readAloud', label: 'Read Aloud', icon: Volume2 },
+  { key: 'readAloud', label: 'Read Aloud', icon: Volume2, disabledIcon: VolumeX },
   { key: 'search', label: 'Search', icon: Search },
   { key: 'font', label: 'Font', icon: Type },
   { key: 'pages', label: 'Pages', icon: Rows3 },
@@ -41,7 +44,7 @@ const ITEMS: Array<{ key: string; label: string; icon: any }> = [
   { key: 'settings', label: 'Settings', icon: Settings },
 ];
 
-export function RectangularMenu({ onSelect }: Props) {
+export function RectangularMenu({ onSelect, ttsActive = false, ttsDisabled = false }: Props) {
   const { isCollapsed, toggle, activePanel } = useMenuStore();
   const t = useAppTheme();
   const width = isCollapsed ? 56 : 220;
@@ -65,16 +68,19 @@ export function RectangularMenu({ onSelect }: Props) {
       </Pressable>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
         {ITEMS.map(item => {
-          const Icon = item.icon;
+          const isReadAloud = item.key === 'readAloud';
+          const Icon = isReadAloud && ttsDisabled && item.disabledIcon ? item.disabledIcon : item.icon;
+          const isActive = isReadAloud ? ttsActive || activePanel === 'ttsSettings' : activePanel === item.key;
+          const disabled = isReadAloud && ttsDisabled;
           return (
             <MenuItem
               key={item.key}
               collapsed={isCollapsed}
               label={item.label}
-              active={activePanel === item.key}
+              active={!!isActive}
               onPress={() => onSelect(item.key)}
               testID={`menu-${item.key}`}
-              icon={<Icon size={24} color={activePanel === item.key ? t.bgCardDark : t.textInverse} />}
+              icon={<Icon size={24} color={isActive ? t.bgCardDark : t.textInverse} style={disabled ? { opacity: 0.4 } : undefined} />}
             />
           );
         })}

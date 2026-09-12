@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type ActivePanel = 'toc' | 'bookmarks' | 'highlights' | 'notes' | 'search' | 'font' | 'pages' | 'progress' | 'dictionary' | 'settings' | null;
+type ActivePanel = 'toc' | 'bookmarks' | 'highlights' | 'notes' | 'search' | 'font' | 'pages' | 'progress' | 'dictionary' | 'settings' | 'ttsExpanded' | 'ttsSettings' | null;
 
 type MenuStore = {
   isCollapsed: boolean;

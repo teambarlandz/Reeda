@@ -90,3 +90,14 @@ jest.mock('crypto-js', () => ({
   SHA256: jest.fn(() => ({ toString: jest.fn(() => 'mockhash') })),
   algo: { SHA256: { create: jest.fn(() => ({ update: jest.fn(() => ({})), finalize: jest.fn(() => mockWordArray) })) } },
 }));
+jest.mock('react-native-tts', () => ({
+  getInitStatus: jest.fn(() => Promise.resolve()),
+  setDefaultRate: jest.fn(() => Promise.resolve()),
+  setDefaultLanguage: jest.fn(() => Promise.resolve()),
+  setDefaultVoice: jest.fn(() => Promise.resolve()),
+  voices: jest.fn(() => Promise.resolve([{ id: 'test-voice', name: 'Test Voice', language: 'en-US' }])),
+  speak: jest.fn(() => Promise.resolve()),
+  stop: jest.fn(() => Promise.resolve()),
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  removeEventListener: jest.fn(),
+}), { virtual: true });

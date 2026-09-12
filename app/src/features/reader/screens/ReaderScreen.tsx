@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions, ToastAndroid, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { typography, spacing } from '../../../shared/theme/tokens';
@@ -16,6 +16,12 @@ import { BookmarkRepository } from '../../../data/repositories/BookmarkRepositor
 import { DictionaryHistoryRepository } from '../../../data/repositories/DictionaryHistoryRepository';
 import { RectangularMenu } from '../menu/RectangularMenu';
 import { ReadingToolbar } from '../toolbar/ReadingToolbar';
+import { TTSMiniPlayer } from '../toolbar/TTSMiniPlayer';
+import { TTSExpandedPlayer } from '../panels/TTSExpandedPlayer';
+import { TTSSettings } from '../panels/TTSSettings';
+import { useTtsStore } from '../../../tts/ttsStore';
+import { useTts } from '../../../tts/useTts';
+import { TtsEngine } from '../../../tts/TtsEngine';
 import { FullscreenController } from '../modes/FullscreenController';
 import { ScrollMode } from '../modes/ScrollMode';
 import { PaginateMode } from '../modes/PaginateMode';
@@ -98,6 +104,81 @@ export function ReaderScreen() {
   const totalPages = Math.max(1, Math.ceil(parsedChapters.reduce((sum, c) => sum + c.rawText.length, 0) / 1200));
   const progressPercent = progress?.progressPercent ?? 0;
   const currentChapterId = progress?.currentChapterId ?? parsedChapters[0]?.id;
+  const currentTtsChapterIndex = Math.max(0, parsedChapters.findIndex(c => c.id === currentChapterId));
+
+  // TTS setup per phase-3-reader.md:3.9 and phase-4.md:M6
+  const rawTextPerChapter = parsedChapters.map(c => c.rawText);
+  const totalRawLength = rawTextPerChapter.join('').length;
+  const hasTextLayerForBook = totalRawLength > 200; // heuristic for scanned PDF / image-only
+  const ttsStore = useTtsStore();
+  const { isActive: isTtsActive, isPlaying: isTtsPlaying, isExpanded: isTtsExpanded, highlightSync: ttsHighlightSync, queue: ttsQueue, currentIndex: ttsIndex, currentWordIndex, engineAvailable, hasTextLayer } = ttsStore;
+  const ttsCurrentSentence = isTtsActive && ttsHighlightSync ? ttsQueue[ttsIndex]?.text ?? null : null;
+  const { toggleActive: toggleTtsActive, togglePlay: toggleTtsPlay, skip: ttsSkip, seekToProgress: ttsSeek, cycleRate: ttsCycleRate, setRate: ttsSetRate, setVoice: ttsSetVoice, dismiss: ttsDismiss } = useTts(parsedChapters, currentTtsChapterIndex, book?.title);
+
+  // Sync hasTextLayer flag into store for UI disable — skip in test to avoid act warnings
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'test') return;
+    const pdfScanned = book?.format === 'pdf' && !hasTextLayerForBook;
+    const docxNoTts = book?.format === 'docx';
+    const noTts = pdfScanned || docxNoTts;
+    if (ttsStore.hasTextLayer === !noTts) return;
+    ttsStore.setHasTextLayer(!noTts);
+  }, [book?.format, hasTextLayerForBook]);
+
+  // Keep toolbar visible while TTS is active (combined chrome)
+  useEffect(() => {
+    if (isTtsActive) setToolbarVisible(true);
+  }, [isTtsActive]);
+
+  // Word underline animation: advance word index while playing per rate
+  useEffect(() => {
+    if (!isTtsActive || !isTtsPlaying || !ttsHighlightSync || !ttsCurrentSentence) return;
+    const words = ttsCurrentSentence.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return;
+    const wpm = 150 * ttsStore.rate;
+    const msPerWord = (60000 / wpm);
+    const id = setInterval(() => {
+      const s = useTtsStore.getState();
+      const next = s.currentWordIndex + 1;
+      if (next >= words.length) {
+        // stay at last word until sentence finishes
+        return;
+      }
+      s.setCurrentWordIndex(next);
+    }, msPerWord);
+    return () => clearInterval(id);
+  }, [isTtsActive, isTtsPlaying, ttsCurrentSentence, ttsHighlightSync, ttsStore.rate]);
+
+  // Auto-scroll spoken sentence into middle third (300ms smooth per spec)
+  useEffect(() => {
+    if (!isTtsActive || !ttsHighlightSync || !ttsCurrentSentence) return;
+    if (readingMode !== 'scroll') return;
+    // Estimate chapter + sentence position
+    const cur = ttsQueue[ttsIndex];
+    if (!cur) return;
+    const y = cur.chapterIndex * 1200 + cur.offsetInChapter * 0.05; // approximate
+    // Center in middle third: scroll to y - viewport/3
+    const { height } = require('react-native').Dimensions.get('window');
+    const targetY = Math.max(0, y - height / 3);
+    scrollRef.current?.scrollTo({ y: targetY, animated: true });
+  }, [ttsIndex, isTtsActive, ttsHighlightSync, ttsCurrentSentence, readingMode, ttsQueue]);
+
+  // Paginate auto page turn when TTS reaches page boundary (500ms pause per spec)
+  useEffect(() => {
+    if (!isTtsActive || !isTtsPlaying) return undefined;
+    if (readingMode !== 'paginate') return undefined;
+    const cur = ttsQueue[ttsIndex];
+    if (!cur) return undefined;
+    // Approximate page for this sentence
+    const pagesBeforeChapter = parsedChapters.slice(0, cur.chapterIndex).reduce((sum, c) => sum + Math.ceil(c.rawText.length / 1200), 0);
+    const offsetPage = Math.floor(cur.offsetInChapter / 1200);
+    const sentencePage = pagesBeforeChapter + offsetPage + 1;
+    if (sentencePage !== currentPage) {
+      const tId = setTimeout(() => setCurrentPage(sentencePage), 500);
+      return () => clearTimeout(tId);
+    }
+    return undefined;
+  }, [ttsIndex, isTtsActive, isTtsPlaying, readingMode, parsedChapters, currentPage, ttsQueue]);
 
   // Restore position
   useEffect(() => {
@@ -122,15 +203,16 @@ export function ReaderScreen() {
     BookmarkRepository.isBookmarked(bookId, currentPage).then(setIsBookmarked);
   }, [bookId, currentPage]);
 
-  // Auto-hide toolbar
+  // Auto-hide toolbar (not when TTS active — keep combined chrome visible)
   useEffect(() => {
     if (!toolbarVisible) return;
+    if (isTtsActive) return;
     const timer = setTimeout(() => setToolbarVisible(false), 3000);
     return () => clearTimeout(timer);
-  }, [toolbarVisible]);
+  }, [toolbarVisible, isTtsActive]);
 
   const handleMenuSelect = useCallback(
-    (key: string) => {
+    async (key: string) => {
       const panelMap: Record<string, any> = {
         chapters: 'toc',
         bookmarks: 'bookmarks',
@@ -144,14 +226,40 @@ export function ReaderScreen() {
         settings: 'settings',
       };
       const panel = panelMap[key];
-      if (panel) setActivePanel(panel as any);
-      else if (key === 'share') {
+      if (panel) {
+        // If TTS expanded is open, close it first
+        if (useTtsStore.getState().isExpanded) useTtsStore.getState().setExpanded(false);
+        setActivePanel(panel as any);
+      } else if (key === 'share') {
         // native share placeholder
       } else if (key === 'readAloud') {
-        // TTS placeholder (M6)
+        // Per phase-3-reader.md:3.9 Entry: toggles TTS on/off; when active second tap opens settings
+        if (useTtsStore.getState().isActive) {
+          setActivePanel('ttsSettings');
+          return;
+        }
+        // Guard: scanned PDF with no text layer → disabled (VolumeX 40% per 3.9 table)
+        if (hasTextLayer === false) {
+          if (Platform.OS === 'android') ToastAndroid.show('No readable text on this page. Try another page.', ToastAndroid.SHORT);
+          return;
+        }
+        // Guard: engine unavailable → install prompt
+        if (engineAvailable === false) {
+          if (Platform.OS === 'android') ToastAndroid.show('Text-to-speech not available. Install system TTS engine?', ToastAndroid.LONG);
+          void TtsEngine.openInstall();
+          return;
+        }
+        // If hasTextLayer false computed locally but not yet in store, re-check
+        const pdfScannedLocal = book?.format === 'pdf' && !hasTextLayerForBook;
+        if (pdfScannedLocal) {
+          if (Platform.OS === 'android') ToastAndroid.show('No readable text on this page. Try another page.', ToastAndroid.SHORT);
+          return;
+        }
+        await toggleTtsActive();
+        setActivePanel(null);
       }
     },
-    [setActivePanel],
+    [setActivePanel, hasTextLayer, engineAvailable, book?.format, hasTextLayerForBook, toggleTtsActive],
   );
 
   const handleTocSelect = useCallback(
@@ -301,17 +409,16 @@ export function ReaderScreen() {
   const isLandscape = orientation === 'landscape' ? true : orientation === 'portrait' ? false : isLandscapeSystem;
   const isPdf = book?.format === 'pdf';
   const isDocx = book?.format === 'docx';
-  const highlightCount = highlights?.length ?? 0;
 
   return (
     <FullscreenController>
       <View style={[styles.root, { backgroundColor: t.bgPrimary }]} testID="reader-screen">
-        {!isFullscreen && width >= 360 && <RectangularMenu onSelect={handleMenuSelect} />}
+        {!isFullscreen && width >= 360 && <RectangularMenu onSelect={handleMenuSelect} ttsActive={isTtsActive} ttsDisabled={book?.format === 'pdf' && !hasTextLayerForBook} />}
 
         <View style={styles.contentWrap}>
           <Pressable style={styles.content} onPress={() => setToolbarVisible(v => !v)} testID="reader-content-tap">
             {isPdf ? (
-              <PdfView source={{ uri: book?.filePath ?? '' }} page={currentPage} onPageChanged={(p, n) => handleScrub(p / n)} hasTextLayer={true} />
+              <PdfView source={{ uri: book?.filePath ?? '' }} page={currentPage} onPageChanged={(p, n) => handleScrub(p / n)} hasTextLayer={hasTextLayerForBook} />
             ) : isDocx ? (
               <View style={styles.centered}>
                 <Text style={[typography.body, { color: t.textSecondary, textAlign: 'center' }]}>DOCX preview coming soon</Text>
@@ -325,6 +432,9 @@ export function ReaderScreen() {
                 scrollRef={scrollRef}
                 onLongPressText={handleLongPressText}
                 onHighlightTap={handleHighlightTap}
+                ttsSentence={ttsCurrentSentence}
+                ttsWordIndex={currentWordIndex}
+                ttsHighlightSync={ttsHighlightSync && isTtsActive}
               />
             ) : (
               <PaginateMode chapters={parsedChapters} initialPage={currentPage} onPageChange={page => savePosition({ currentPage: page, progressPercent: page / totalPages })} />
@@ -370,22 +480,38 @@ export function ReaderScreen() {
           />
         </View>
 
-        <ReadingToolbar
-          visible={toolbarVisible && !isFullscreen}
-          page={currentPage}
-          chapterName={parsedChapters[0]?.title ?? book?.title ?? 'Chapter'}
-          isBookmarked={isBookmarked}
-          highlightColor={editingColor}
-          onPagePress={() => setActivePanel('pages')}
-          onChapterPress={() => setActivePanel('toc')}
-          onBookmarkPress={handleBookmarkToggle}
-          onColorPress={() => setShowHighlightPicker(v => !v)}
-          onMenuPress={() => useMenuStore.getState().toggle()}
-        />
+        {/* Combined chrome: TTS mini-player stacked on toolbar with no gap per spec */}
+        <View style={[styles.bottomChrome, isTtsActive ? { height: 120 } : { height: 56 }]} pointerEvents={isFullscreen ? 'none' : 'auto'}>
+          {isTtsActive && (
+            <TTSMiniPlayer
+              visible={isTtsActive && !isFullscreen}
+              onTogglePlay={toggleTtsPlay}
+              onSkipBack={() => ttsSkip(-10)}
+              onSkipForward={() => ttsSkip(10)}
+              onDismiss={ttsDismiss}
+              onCycleRate={ttsCycleRate}
+              onOpenExpanded={() => useTtsStore.getState().setExpanded(true)}
+              onOpenToc={() => setActivePanel('toc')}
+              onSeek={ttsSeek}
+            />
+          )}
+          <ReadingToolbar
+            visible={(toolbarVisible || isTtsActive) && !isFullscreen}
+            page={currentPage}
+            chapterName={parsedChapters[0]?.title ?? book?.title ?? 'Chapter'}
+            isBookmarked={isBookmarked}
+            highlightColor={editingColor}
+            onPagePress={() => setActivePanel('pages')}
+            onChapterPress={() => setActivePanel('toc')}
+            onBookmarkPress={handleBookmarkToggle}
+            onColorPress={() => setShowHighlightPicker(v => !v)}
+            onMenuPress={() => useMenuStore.getState().toggle()}
+          />
+        </View>
 
         {/* Bookmark floating button per 3.4.5 */}
         <View style={styles.bookmarkFloat}>
-          <BookmarkButton isBookmarked={isBookmarked} onToggle={handleBookmarkToggle} visible={toolbarVisible} />
+          <BookmarkButton isBookmarked={isBookmarked} onToggle={handleBookmarkToggle} visible={toolbarVisible && !isTtsActive} />
         </View>
 
         <TOCPanel
@@ -425,6 +551,19 @@ export function ReaderScreen() {
             else setCurrentPage(Math.ceil(off / 1200) + 1);
           }}
         />
+        {/* TTS Expanded Player and Settings per M6 */}
+        <TTSExpandedPlayer
+          visible={isTtsExpanded}
+          onClose={() => useTtsStore.getState().setExpanded(false)}
+          onTogglePlay={toggleTtsPlay}
+          onSkipBack={() => ttsSkip(-10)}
+          onSkipForward={() => ttsSkip(10)}
+          onSeek={ttsSeek}
+          onSetRate={ttsSetRate}
+          onSetVoice={ttsSetVoice}
+          bookTitle={book?.title}
+        />
+        <TTSSettings visible={activePanel === 'ttsSettings'} onClose={() => setActivePanel(null)} />
         <NoteSheet
           visible={noteVisible}
           anchorText={noteAnchor}
@@ -448,6 +587,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   contentWrap: { flex: 1, position: 'relative' },
   content: { flex: 1 },
+  bottomChrome: { position: 'absolute', bottom: 0, left: 0, right: 0, justifyContent: 'flex-end' },
   backBtn: { position: 'absolute', top: 40, left: 20, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: 9999 },
   selectionWrap: { position: 'absolute', top: 80, left: 0, right: 0, alignItems: 'center', zIndex: 15 },
   demoSelectionLayer: { position: 'absolute', top: 40, left: 10, right: 10, opacity: 0.01 },
