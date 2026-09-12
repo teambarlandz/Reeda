@@ -5,7 +5,7 @@ import { typography, spacing, radius } from '../../../shared/theme/tokens';
 import { SegmentedControl } from '../../../shared/ui/SegmentedControl';
 
 const THEME_LABELS = ['Light', 'Neutral Dark', 'Warm Dark'] as const;
-const LABEL_TO_MODE = { Light: 'light', 'Neutral Dark': 'neutralDark', Warm Dark: 'warmDark' } as const;
+const LABEL_TO_MODE = { Light: 'light', 'Neutral Dark': 'neutralDark', 'Warm Dark': 'warmDark' } as const;
 const MODE_TO_LABEL = { light: 'Light', neutralDark: 'Neutral Dark', warmDark: 'Warm Dark' } as const;
 
 export function AppThemeToggle() {

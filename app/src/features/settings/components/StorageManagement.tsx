@@ -118,7 +118,7 @@ export function StorageManagement() {
         accessibilityRole="button"
         testID="clear-search-history"
       >
-        <Text style={[typography.caption, { color: t.accent }]}>{clearing ? 'Clearing...' : 'Clear search history'}</Text>
+        <Text style={[typography.caption, { color: t.textPrimary }]}>{clearing ? 'Clearing...' : 'Clear search history'}</Text>
       </Pressable>
     </View>
   );

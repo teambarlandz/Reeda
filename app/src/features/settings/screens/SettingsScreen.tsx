@@ -75,7 +75,7 @@ export function SettingsScreen() {
 
         <View style={[styles.aboutRow, { borderBottomWidth: 0 }]}>
           <Text style={[typography.body, { color: t.textPrimary }]}>Contact / Support</Text>
-          <Text style={[typography.caption, { color: t.accent }]}>{SUPPORT_EMAIL}</Text>
+          <Text style={[typography.caption, { color: t.textPrimary }]}>{SUPPORT_EMAIL}</Text>
         </View>
       </View>
 

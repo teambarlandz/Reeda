@@ -50,7 +50,7 @@ export const BookCard = memo(function BookCard({ book, onPress, onLongPress, pro
   // Preload cover into FastImage cache on mount
   useEffect(() => {
     if (book.coverPath) {
-      void FastImage.preload([{ uri: `file://${book.coverPath}` }]).catch(() => {});
+      FastImage.preload([{ uri: `file://${book.coverPath}` }]);
     }
   }, [book.coverPath]);
 
