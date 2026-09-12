@@ -1,20 +1,23 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { typography, spacing } from '../../../shared/theme/tokens';
-import { SlidersHorizontal } from '../../../shared/icons';
+import { SlidersHorizontal, Upload, Library } from '../../../shared/icons';
 import { Button } from '../../../shared/ui';
 import { BookGrid } from '../components/BookGrid';
 import { SearchBar } from '../components/SearchBar';
 import { ContinueReadingCard } from '../components/ContinueReadingCard';
 import { StatsWidget } from '../components/StatsWidget';
 import { FilterSheet } from '../components/FilterSheet';
+import { ShelvesSheet } from '../components/ShelvesSheet';
+import { ImportProgressOverlay } from '../../import/ImportProgressOverlay';
 import { useLibraryBooks } from '../hooks/useLibraryBooks';
 import { useLibrarySearch } from '../hooks/useLibrarySearch';
 import { BookRepository } from '../../../data/repositories/BookRepository';
 import { ProgressRepository } from '../../../data/repositories/ProgressRepository';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FileStorage } from '../../../data/files/FileStorage';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function LibraryScreen() {
   const t = useAppTheme();
@@ -22,6 +25,7 @@ export function LibraryScreen() {
   const { data: books, isLoading } = useLibraryBooks();
   const { query, onChange } = useLibrarySearch();
   const [showFilter, setShowFilter] = useState(false);
+  const [showShelves, setShowShelves] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, number>>({});
   const queryClient = useQueryClient();
   const hasSeededRef = React.useRef(false);
@@ -43,7 +47,6 @@ export function LibraryScreen() {
           for (const s of samples) {
             // eslint-disable-next-line no-await-in-loop
             await BookRepository.upsert(s as any);
-            // Give each a fake progress for Continue Reading demo
             // eslint-disable-next-line no-await-in-loop
             await ProgressRepository.updatePosition(s.id, { progressPercent: s.id === 'sample-alice' ? 0.43 : s.id === 'sample-pride' ? 0.12 : 0.07 });
           }
@@ -90,8 +93,30 @@ export function LibraryScreen() {
   }, [navigation]);
 
   const handleImportPress = useCallback(() => {
-    navigation.navigate('Reader', { bookId: 'placeholder' });
+    navigation.navigate('Import');
   }, [navigation]);
+
+  const handleDelete = useCallback(
+    (bookId: string, title: string, format: string) => {
+      Alert.alert(
+        `Delete ${title}?`,
+        'Highlights and notes for this book will also be removed.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              await BookRepository.delete(bookId);
+              await FileStorage.deleteBookFiles(bookId, format);
+              queryClient.invalidateQueries({ queryKey: ['books'] });
+            },
+          },
+        ],
+      );
+    },
+    [queryClient],
+  );
 
   const continueBook = books?.find(b => (progressMap[b.id] ?? 0) > 0 && (progressMap[b.id] ?? 0) < 1) ?? books?.[0];
 
@@ -107,22 +132,30 @@ export function LibraryScreen() {
       <View style={[styles.container, { backgroundColor: t.bgPrimary }]}>
         <View style={[styles.topNav, { backgroundColor: t.bgPrimary }]}>
           <SearchBar value={query} onChangeText={onChange} onSubmit={handleSearchFocus} testID="search-pill" />
+          <TouchableOpacity onPress={handleImportPress} style={styles.iconBtn} testID="import-btn">
+            <Upload size={20} color={t.iconTint} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowFilter(true)} style={styles.iconBtn}>
             <SlidersHorizontal size={24} color={t.iconTint} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowShelves(true)} style={styles.iconBtn} testID="shelves-btn">
+            <Library size={20} color={t.iconTint} />
           </TouchableOpacity>
           <View style={[styles.avatar, { backgroundColor: t.avatarBg }]}>
             <Text style={{ color: t.textInverse }}>S</Text>
           </View>
         </View>
+        <ImportProgressOverlay />
         <View style={styles.emptyWrap}>
           <Text style={[typography.heading, { color: t.textPrimary, marginBottom: spacing.sm }]}>Your shelf is empty</Text>
           <Text style={[typography.body, { color: t.textSecondary, marginBottom: spacing.xl, textAlign: 'center' }]}>Import a book to get started</Text>
           <Button title="Import a book" onPress={handleImportPress} testID="import-cta" />
-          <TouchableOpacity onPress={handleImportPress} style={{ marginTop: spacing.lg }} testID="nav-reader-debug">
-            <Text style={[typography.caption, { color: t.textSecondary }]}>Open Reader (debug)</Text>
+          <TouchableOpacity onPress={handleImportPress} style={{ marginTop: spacing.lg }} testID="nav-import-debug">
+            <Text style={[typography.caption, { color: t.textSecondary }]}>Open Import (debug)</Text>
           </TouchableOpacity>
         </View>
         <FilterSheet visible={showFilter} onClose={() => setShowFilter(false)} />
+        <ShelvesSheet visible={showShelves} onClose={() => setShowShelves(false)} />
       </View>
     );
   }
@@ -138,14 +171,21 @@ export function LibraryScreen() {
             <SearchBar value={query} onChangeText={onChange} onSubmit={handleSearchFocus} testID="search-pill" />
           </View>
         </TouchableOpacity>
+        <TouchableOpacity onPress={handleImportPress} style={styles.iconBtn} testID="import-btn">
+          <Upload size={20} color={t.iconTint} />
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => setShowFilter(true)} style={styles.iconBtn} testID="filter-btn">
           <SlidersHorizontal size={24} color={t.iconTint} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowShelves(true)} style={styles.iconBtn} testID="shelves-btn">
+          <Library size={20} color={t.iconTint} />
         </TouchableOpacity>
         <View style={[styles.avatar, { backgroundColor: t.avatarBg }]}>
           <Text style={{ color: t.textInverse }}>S</Text>
         </View>
       </View>
 
+      <ImportProgressOverlay />
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         {continueBook && (
           <View style={{ marginTop: spacing['2xl'] }}>
@@ -159,7 +199,7 @@ export function LibraryScreen() {
           <Text style={[typography.caption, { color: t.textSecondary }]}>5 columns</Text>
         </View>
 
-        <BookGrid books={books} onPress={handleBookPress} progressMap={progressMap} highlightTokens={highlightTokens} numColumns={5} />
+        <BookGrid books={books} onPress={handleBookPress} onLongPress={handleDelete} progressMap={progressMap} highlightTokens={highlightTokens} numColumns={5} />
 
         <StatsWidget />
 
@@ -169,10 +209,11 @@ export function LibraryScreen() {
             All
           </Text>
         </View>
-        <BookGrid books={[...books].sort((a, b) => b.addedAt - a.addedAt).slice(0, 5)} onPress={handleBookPress} progressMap={progressMap} numColumns={5} />
+        <BookGrid books={[...books].sort((a, b) => b.addedAt - a.addedAt).slice(0, 5)} onPress={handleBookPress} onLongPress={handleDelete} progressMap={progressMap} numColumns={5} />
       </ScrollView>
 
       <FilterSheet visible={showFilter} onClose={() => setShowFilter(false)} />
+      <ShelvesSheet visible={showShelves} onClose={() => setShowShelves(false)} />
     </View>
   );
 }

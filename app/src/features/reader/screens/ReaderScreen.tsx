@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Dimensions, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { typography, spacing } from '../../../shared/theme/tokens';
@@ -10,6 +10,10 @@ import { useProgress } from '../hooks/useProgress';
 import { BookRepository } from '../../../data/repositories/BookRepository';
 import { ChapterRepository, Chapter } from '../../../data/repositories/ChapterRepository';
 import { ReadingSessionsRepository } from '../../../data/repositories/ReadingSessionsRepository';
+import { HighlightRepository, HIGHLIGHT_COLORS } from '../../../data/repositories/HighlightRepository';
+import { NoteRepository } from '../../../data/repositories/NoteRepository';
+import { BookmarkRepository } from '../../../data/repositories/BookmarkRepository';
+import { DictionaryHistoryRepository } from '../../../data/repositories/DictionaryHistoryRepository';
 import { RectangularMenu } from '../menu/RectangularMenu';
 import { ReadingToolbar } from '../toolbar/ReadingToolbar';
 import { FullscreenController } from '../modes/FullscreenController';
@@ -20,7 +24,16 @@ import { TOCPanel } from '../panels/TOCPanel';
 import { PagesGrid } from '../panels/PagesGrid';
 import { ProgressStrip } from '../panels/ProgressStrip';
 import { ThemePanel } from '../panels/ThemePanel';
-import { useQuery } from '@tanstack/react-query';
+import { HighlightsPanel } from '../panels/HighlightsPanel';
+import { NotesPanel } from '../panels/NotesPanel';
+import { BookmarksPanel } from '../panels/BookmarksPanel';
+import { DictionaryCard } from '../panels/DictionaryCard';
+import { SearchSheet } from '../panels/SearchSheet';
+import { SelectionToolbar } from '../annotations/SelectionToolbar';
+import { HighlightPicker } from '../annotations/HighlightPicker';
+import { NoteSheet } from '../annotations/NoteSheet';
+import { BookmarkButton } from '../annotations/BookmarkButton';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ParsedChapter } from '../../../parsing/epub/parse';
 
 function getSampleChapters(bookId: string): ParsedChapter[] | null {
@@ -54,31 +67,45 @@ export function ReaderScreen() {
   const route = useRoute<any>();
   const bookId = route.params?.bookId ?? 'sample-alice';
 
-  const { readingMode, theme } = useReaderStore();
+  const { readingMode } = useReaderStore();
   const { activePanel, setActivePanel } = useMenuStore();
   const { savePosition } = useReaderPosition(bookId);
   const { data: progress } = useProgress(bookId);
+  const queryClient = useQueryClient();
 
   const [toolbarVisible, setToolbarVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const scrollRef = useRef<ScrollView>(null);
   const sessionRef = useRef<string | null>(null);
 
+  // Selection / annotation state per phase-3-reader.md:3.4
+  const [selectedText, setSelectedText] = useState<string | null>(null);
+  const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+  const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null);
+  const [editingColor, setEditingColor] = useState<string>(HIGHLIGHT_COLORS[0]);
+  const [noteVisible, setNoteVisible] = useState(false);
+  const [noteAnchor, setNoteAnchor] = useState<string | undefined>(undefined);
+  const [noteHighlightId, setNoteHighlightId] = useState<string | undefined>(undefined);
+  const [dictWord, setDictWord] = useState<string | undefined>(undefined);
+  const [dictDef, setDictDef] = useState<string | undefined>(undefined);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+
   const { data: book } = useQuery({ queryKey: ['book', bookId], queryFn: () => BookRepository.get(bookId) });
   const { data: chaptersDB } = useQuery({ queryKey: ['chapters', bookId], queryFn: () => ChapterRepository.list(bookId) });
-
-  // Resolve parsed chapters: prefer sample hard-coded, else DB chapters, else fallback
+  const { data: highlights } = useQuery({ queryKey: ['highlights', bookId], queryFn: () => HighlightRepository.list(bookId) });
+  const { data: notes } = useQuery({ queryKey: ['notes', bookId], queryFn: () => NoteRepository.list(bookId) });
   const parsedChapters: ParsedChapter[] = getSampleChapters(bookId) ?? (chaptersDB as any as ParsedChapter[]) ?? [];
   const totalPages = Math.max(1, Math.ceil(parsedChapters.reduce((sum, c) => sum + c.rawText.length, 0) / 1200));
   const progressPercent = progress?.progressPercent ?? 0;
   const currentChapterId = progress?.currentChapterId ?? parsedChapters[0]?.id;
 
-  // Restore position on open
+  // Restore position
   useEffect(() => {
     if (progress?.lastPosition) {
-      const pos = JSON.parse(progress.lastPosition);
-      if (pos.page) setCurrentPage(pos.page);
-      // Scroll offset handled via scrollRef after mount
+      try {
+        const pos = JSON.parse(progress.lastPosition);
+        if (pos.page) setCurrentPage(pos.page);
+      } catch {}
     }
   }, [progress]);
 
@@ -90,7 +117,12 @@ export function ReaderScreen() {
     };
   }, [bookId]);
 
-  // Auto-hide toolbar after 3s
+  // Bookmark status
+  useEffect(() => {
+    BookmarkRepository.isBookmarked(bookId, currentPage).then(setIsBookmarked);
+  }, [bookId, currentPage]);
+
+  // Auto-hide toolbar
   useEffect(() => {
     if (!toolbarVisible) return;
     const timer = setTimeout(() => setToolbarVisible(false), 3000);
@@ -101,15 +133,22 @@ export function ReaderScreen() {
     (key: string) => {
       const panelMap: Record<string, any> = {
         chapters: 'toc',
+        bookmarks: 'bookmarks',
+        highlights: 'highlights',
+        notes: 'notes',
+        search: 'search',
+        font: 'font',
         pages: 'pages',
         progress: 'progress',
-        font: 'font',
+        dictionary: 'dictionary',
         settings: 'settings',
       };
       const panel = panelMap[key];
       if (panel) setActivePanel(panel as any);
       else if (key === 'share') {
-        // Share placeholder
+        // native share placeholder
+      } else if (key === 'readAloud') {
+        // TTS placeholder (M6)
       }
     },
     [setActivePanel],
@@ -121,7 +160,6 @@ export function ReaderScreen() {
       const idx = parsedChapters.findIndex(c => c.title === chapter.title);
       if (idx >= 0) {
         if (readingMode === 'scroll') {
-          // Approx scroll to chapter: each chapter ~ 3000px
           scrollRef.current?.scrollTo({ y: idx * 1200, animated: true });
         } else {
           const pagesBefore = parsedChapters.slice(0, idx).reduce((sum, c) => sum + Math.ceil(c.rawText.length / 1200), 0);
@@ -151,35 +189,177 @@ export function ReaderScreen() {
     [savePosition],
   );
 
-  // Fullscreen hide menu handling per phase-3-reader.md:3.1
+  // Selection handlers per 3.4.1/3.4.2
+  const handleLongPressText = useCallback(
+    (text: string) => {
+      // Simulate selection of a sentence
+      const sentence = text.slice(0, 80).trim();
+      setSelectedText(sentence);
+      setShowHighlightPicker(false);
+      setEditingHighlightId(null);
+    },
+    [],
+  );
+
+  const handleCopy = useCallback(() => {
+    if (selectedText) {
+      // clipboard mock
+      setSelectedText(null);
+    }
+  }, [selectedText]);
+
+  const handleHighlightTrigger = useCallback(() => {
+    setShowHighlightPicker(true);
+  }, []);
+
+  const handlePickColor = useCallback(
+    async (color: string) => {
+      if (editingHighlightId) {
+        await HighlightRepository.updateColor(editingHighlightId, color);
+        queryClient.invalidateQueries({ queryKey: ['highlights', bookId] });
+        setEditingHighlightId(null);
+        setShowHighlightPicker(false);
+        setSelectedText(null);
+      } else if (selectedText) {
+        await HighlightRepository.create({ bookId, text: selectedText, color, page: currentPage });
+        queryClient.invalidateQueries({ queryKey: ['highlights', bookId] });
+        setShowHighlightPicker(false);
+        setSelectedText(null);
+      }
+      setEditingColor(color);
+    },
+    [bookId, currentPage, editingHighlightId, queryClient, selectedText],
+  );
+
+  const handleRemoveHighlight = useCallback(async () => {
+    if (editingHighlightId) {
+      await HighlightRepository.delete(editingHighlightId);
+      queryClient.invalidateQueries({ queryKey: ['highlights', bookId] });
+      setEditingHighlightId(null);
+      setShowHighlightPicker(false);
+      setSelectedText(null);
+    }
+  }, [bookId, editingHighlightId, queryClient]);
+
+  const handleHighlightTap = useCallback(
+    (h: any) => {
+      setSelectedText(h.text);
+      setEditingHighlightId(h.id);
+      setEditingColor(h.color);
+      setShowHighlightPicker(true);
+    },
+    [],
+  );
+
+  const handleNoteTrigger = useCallback(() => {
+    if (selectedText) {
+      setNoteAnchor(selectedText);
+      setNoteHighlightId(undefined);
+      setNoteVisible(true);
+      setSelectedText(null);
+      setShowHighlightPicker(false);
+    }
+  }, [selectedText]);
+
+  const handleSaveNote = useCallback(
+    async (text: string) => {
+      await NoteRepository.create({ bookId, text, highlightId: noteHighlightId, page: currentPage });
+      queryClient.invalidateQueries({ queryKey: ['notes', bookId] });
+      setNoteVisible(false);
+      setNoteAnchor(undefined);
+      setNoteHighlightId(undefined);
+    },
+    [bookId, currentPage, noteHighlightId, queryClient],
+  );
+
+  const handleDefine = useCallback(async () => {
+    const word = selectedText?.split(' ')[0] ?? selectedText;
+    if (!word) return;
+    const def = `Definition of "${word}": a sample definition for testing (local, no network).`;
+    await DictionaryHistoryRepository.add(word, def);
+    setDictWord(word);
+    setDictDef(def);
+    setSelectedText(null);
+    setShowHighlightPicker(false);
+  }, [selectedText]);
+
+  const handleShare = useCallback(() => {
+    setSelectedText(null);
+    setShowHighlightPicker(false);
+  }, []);
+
+  const handleBookmarkToggle = useCallback(async () => {
+    const newState = await BookmarkRepository.toggle(bookId, currentPage);
+    setIsBookmarked(newState);
+    queryClient.invalidateQueries({ queryKey: ['bookmarks', bookId] });
+  }, [bookId, currentPage, queryClient]);
+
   const isFullscreen = useReaderStore(s => s.isFullscreen);
   const orientation = useReaderStore(s => s.orientation);
   const { width, height } = useWindowDimensions();
   const isLandscapeSystem = width > height;
-  // Respect orientation lock per phase-3-reader.md:3.1 — auto respects system, locked overrides
   const isLandscape = orientation === 'landscape' ? true : orientation === 'portrait' ? false : isLandscapeSystem;
   const isPdf = book?.format === 'pdf';
+  const isDocx = book?.format === 'docx';
+  const highlightCount = highlights?.length ?? 0;
 
   return (
     <FullscreenController>
-      <View style={[styles.root, { backgroundColor: t.bgPrimary, flexDirection: isLandscape ? 'row' : 'row' }]} testID="reader-screen">
-        {/* Menu — hidden in fullscreen, also hidden if window <360dp per phase-3-reader.md:3.1 edge case */}
+      <View style={[styles.root, { backgroundColor: t.bgPrimary }]} testID="reader-screen">
         {!isFullscreen && width >= 360 && <RectangularMenu onSelect={handleMenuSelect} />}
 
-        {/* Content */}
         <View style={styles.contentWrap}>
-          {/* Tap center to toggle toolbar/chrome */}
           <Pressable style={styles.content} onPress={() => setToolbarVisible(v => !v)} testID="reader-content-tap">
             {isPdf ? (
               <PdfView source={{ uri: book?.filePath ?? '' }} page={currentPage} onPageChanged={(p, n) => handleScrub(p / n)} hasTextLayer={true} />
+            ) : isDocx ? (
+              <View style={styles.centered}>
+                <Text style={[typography.body, { color: t.textSecondary, textAlign: 'center' }]}>DOCX preview coming soon</Text>
+              </View>
             ) : readingMode === 'scroll' ? (
-              <ScrollMode chapters={parsedChapters} onScroll={handleScroll} scrollRef={scrollRef} />
+              <ScrollMode
+                chapters={parsedChapters}
+                highlights={highlights}
+                notes={notes}
+                onScroll={handleScroll}
+                scrollRef={scrollRef}
+                onLongPressText={handleLongPressText}
+                onHighlightTap={handleHighlightTap}
+              />
             ) : (
               <PaginateMode chapters={parsedChapters} initialPage={currentPage} onPageChange={page => savePosition({ currentPage: page, progressPercent: page / totalPages })} />
             )}
+
+            {/* Selection toolbar / picker centered above selection */}
+            {selectedText && !showHighlightPicker && (
+              <View style={styles.selectionWrap}>
+                <SelectionToolbar visible={!!selectedText} onCopy={handleCopy} onHighlight={handleHighlightTrigger} onNote={handleNoteTrigger} onDefine={handleDefine} onShare={handleShare} />
+              </View>
+            )}
+            {showHighlightPicker && (
+              <View style={styles.selectionWrap}>
+                <HighlightPicker
+                  visible={showHighlightPicker}
+                  selectedColor={editingColor}
+                  onSelect={handlePickColor}
+                  onRemove={handleRemoveHighlight}
+                  showRemove={!!editingHighlightId}
+                  onCopy={handleCopy}
+                  onAddNote={() => {
+                    setNoteAnchor(selectedText ?? undefined);
+                    setNoteHighlightId(editingHighlightId ?? undefined);
+                    setNoteVisible(true);
+                    setShowHighlightPicker(false);
+                    setSelectedText(null);
+                    setEditingHighlightId(null);
+                  }}
+                />
+              </View>
+            )}
+
+            {/* Selection handled via ScrollMode onLongPressText / onHighlightTap — no extra demo layer needed */}
           </Pressable>
 
-          {/* Progress strip always visible 2dp */}
           <ProgressStrip
             progress={progressPercent}
             totalPages={totalPages}
@@ -190,21 +370,24 @@ export function ReaderScreen() {
           />
         </View>
 
-        {/* Toolbar */}
         <ReadingToolbar
           visible={toolbarVisible && !isFullscreen}
           page={currentPage}
           chapterName={parsedChapters[0]?.title ?? book?.title ?? 'Chapter'}
-          isBookmarked={false}
-          highlightColor="#FFEB3B"
+          isBookmarked={isBookmarked}
+          highlightColor={editingColor}
           onPagePress={() => setActivePanel('pages')}
           onChapterPress={() => setActivePanel('toc')}
-          onBookmarkPress={() => {}}
-          onColorPress={() => {}}
+          onBookmarkPress={handleBookmarkToggle}
+          onColorPress={() => setShowHighlightPicker(v => !v)}
           onMenuPress={() => useMenuStore.getState().toggle()}
         />
 
-        {/* Panels */}
+        {/* Bookmark floating button per 3.4.5 */}
+        <View style={styles.bookmarkFloat}>
+          <BookmarkButton isBookmarked={isBookmarked} onToggle={handleBookmarkToggle} visible={toolbarVisible} />
+        </View>
+
         <TOCPanel
           visible={activePanel === 'toc'}
           chapters={(chaptersDB ?? parsedChapters.map((c, i) => ({ id: c.id, bookId, ordering: i, title: c.title, level: 0, pageStart: i * 10 + 1 } as Chapter)))}
@@ -214,8 +397,43 @@ export function ReaderScreen() {
         />
         <PagesGrid visible={activePanel === 'pages'} totalPages={totalPages} currentPage={currentPage} onClose={() => setActivePanel(null)} onSelect={handleScrub as any} />
         <ThemePanel visible={activePanel === 'font'} onClose={() => setActivePanel(null)} />
+        <HighlightsPanel visible={activePanel === 'highlights'} bookId={bookId} onClose={() => setActivePanel(null)} onSelect={handleHighlightTap} />
+        <NotesPanel
+          visible={activePanel === 'notes'}
+          bookId={bookId}
+          onClose={() => setActivePanel(null)}
+          onSelect={note => {
+            setActivePanel(null);
+            // scroll to anchor — for demo, scroll to top
+            scrollRef.current?.scrollTo({ y: 0, animated: true });
+          }}
+          onNew={() => {
+            setNoteAnchor(undefined);
+            setNoteVisible(true);
+          }}
+        />
+        <BookmarksPanel visible={activePanel === 'bookmarks'} bookId={bookId} onClose={() => setActivePanel(null)} onSelect={item => handleTocSelect({ id: item.chapterId ?? '', title: item.snippet ?? '', } as any)} />
+        <DictionaryCard visible={!!dictWord} word={dictWord} definition={dictDef} onClose={() => setDictWord(undefined)} />
+        <SearchSheet
+          visible={activePanel === 'search'}
+          bookTitle={book?.title}
+          rawTextPerChapter={parsedChapters.map(c => c.rawText)}
+          onClose={() => setActivePanel(null)}
+          onSelect={(ci, off) => {
+            setActivePanel(null);
+            if (readingMode === 'scroll') scrollRef.current?.scrollTo({ y: ci * 1200 + off * 0.1, animated: true });
+            else setCurrentPage(Math.ceil(off / 1200) + 1);
+          }}
+        />
+        <NoteSheet
+          visible={noteVisible}
+          anchorText={noteAnchor}
+          highlightColor={editingColor}
+          onColorChange={setEditingColor}
+          onSave={handleSaveNote}
+          onClose={() => setNoteVisible(false)}
+        />
 
-        {/* Back fallback when no chrome */}
         {isFullscreen && toolbarVisible && (
           <Pressable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: t.bgCard }]} testID="reader-back-fullscreen">
             <Text style={[typography.button, { color: t.textPrimary }]}>Back</Text>
@@ -231,4 +449,8 @@ const styles = StyleSheet.create({
   contentWrap: { flex: 1, position: 'relative' },
   content: { flex: 1 },
   backBtn: { position: 'absolute', top: 40, left: 20, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: 9999 },
+  selectionWrap: { position: 'absolute', top: 80, left: 0, right: 0, alignItems: 'center', zIndex: 15 },
+  demoSelectionLayer: { position: 'absolute', top: 40, left: 10, right: 10, opacity: 0.01 },
+  bookmarkFloat: { position: 'absolute', top: 16, right: 16, zIndex: 12 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 } as any);

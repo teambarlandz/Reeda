@@ -11,9 +11,13 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('@tanstack/react-query', () => ({
   useQuery: (opts: any) => {
-    if (opts.queryKey[0] === 'book') return { data: { id: 'sample-alice', title: "Alice's Adventures", author: 'Lewis Carroll' } };
+    if (opts.queryKey[0] === 'book') return { data: { id: 'sample-alice', title: "Alice's Adventures", author: 'Lewis Carroll', format: 'epub' } };
     if (opts.queryKey[0] === 'chapters') return { data: [] };
     if (opts.queryKey[0] === 'progress') return { data: { progressPercent: 0.43, currentChapterId: 'c1' } };
+    if (opts.queryKey[0] === 'highlights') return { data: [] };
+    if (opts.queryKey[0] === 'notes') return { data: [] };
+    if (opts.queryKey[0] === 'bookmarks') return { data: [] };
+    if (opts.queryKey[0] === 'dict-history') return { data: [] };
     return { data: null };
   },
   useQueryClient: () => ({ invalidateQueries: jest.fn() }),

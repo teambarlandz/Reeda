@@ -18,12 +18,20 @@ export function useLibraryBooks() {
           Shelf: 'shelf',
         };
         const facet = facetMap[searchFacet] ?? 'all';
-        return BookRepository.search(searchQuery, facet);
+        let results = await BookRepository.search(searchQuery, facet);
+        if (filter) {
+          const { ShelvesRepository } = await import('../../../data/repositories/ShelvesRepository');
+          const ids = await ShelvesRepository.getBookIdsForShelfName(filter);
+          results = results.filter(b => ids.includes(b.id));
+        }
+        return results;
       }
-      // Empty search → list + client sort/filter (M2 minimal)
+      // Empty search → list + client sort/filter
       let books = await BookRepository.list();
       if (filter) {
-        books = books.filter(b => (b as any).shelfIds?.includes(filter));
+        const { ShelvesRepository } = await import('../../../data/repositories/ShelvesRepository');
+        const ids = await ShelvesRepository.getBookIdsForShelfName(filter);
+        books = books.filter(b => ids.includes(b.id));
       }
       if (sort === 'title') books.sort((a, b) => a.title.localeCompare(b.title));
       else if (sort === 'author') books.sort((a, b) => (a.author ?? '').localeCompare(b.author ?? ''));

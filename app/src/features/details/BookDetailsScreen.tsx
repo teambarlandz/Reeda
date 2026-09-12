@@ -1,13 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../shared/theme/useTheme';
 import { typography, spacing, radius } from '../../shared/theme/tokens';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookRepository } from '../../data/repositories/BookRepository';
 import { ProgressRepository } from '../../data/repositories/ProgressRepository';
 import { ShelvesRepository } from '../../data/repositories/ShelvesRepository';
+import { FileStorage } from '../../data/files/FileStorage';
 import { Button, Card } from '../../shared/ui';
+import { ShelvesSheet } from '../library/components/ShelvesSheet';
 import FastImage from 'react-native-fast-image';
 
 export function BookDetailsScreen() {
@@ -15,6 +17,8 @@ export function BookDetailsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const bookId = route.params?.bookId;
+  const queryClient = useQueryClient();
+  const [showShelves, setShowShelves] = useState(false);
 
   const { data: book } = useQuery({
     queryKey: ['book', bookId],
@@ -71,18 +75,55 @@ export function BookDetailsScreen() {
             {(shelves ?? []).map((s: any) => (
               <TouchableOpacity
                 key={s.id}
-                onPress={() => ShelvesRepository.assign(bookId, s.id)}
+                onPress={async () => {
+                  await ShelvesRepository.assign(bookId, s.id);
+                  queryClient.invalidateQueries({ queryKey: ['books'] });
+                }}
                 style={{ backgroundColor: t.bgSearch, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full }}
               >
                 <Text style={[typography.caption, { color: t.textSecondary }]}>{s.name}</Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              onPress={() => setShowShelves(true)}
+              style={{ backgroundColor: t.bgCardDark, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full }}
+              testID="manage-shelves"
+            >
+              <Text style={[typography.caption, { color: t.textInverse }]}>+ New Shelf</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: spacing.xl }}>
+        <TouchableOpacity
+          onPress={() => {
+            Alert.alert(
+              `Delete ${book.title}?`,
+              'Highlights and notes for this book will also be removed.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await BookRepository.delete(bookId);
+                    await FileStorage.deleteBookFiles(bookId, book.format);
+                    queryClient.invalidateQueries({ queryKey: ['books'] });
+                    navigation.goBack();
+                  },
+                },
+              ],
+            );
+          }}
+          style={{ marginTop: spacing.xl, backgroundColor: '#E53935', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.full }}
+          testID="delete-book"
+        >
+          <Text style={[typography.button, { color: '#FFFFFF' }]}>Delete Book</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: spacing.md }}>
           <Text style={[typography.caption, { color: t.textSecondary }]}>Back</Text>
         </TouchableOpacity>
+        <ShelvesSheet visible={showShelves} onClose={() => setShowShelves(false)} bookId={bookId} />
       </View>
     </ScrollView>
   );

@@ -58,3 +58,35 @@ jest.mock(
   }),
   { virtual: true },
 );
+jest.mock('react-native-fs', () => ({
+  DocumentDirectoryPath: '/tmp',
+  exists: jest.fn(() => Promise.resolve(true)),
+  mkdir: jest.fn(() => Promise.resolve()),
+  copyFile: jest.fn(() => Promise.resolve()),
+  readFile: jest.fn(() => Promise.resolve('')),
+  stat: jest.fn(() => Promise.resolve({ size: 1024, mtime: new Date() })),
+  unlink: jest.fn(() => Promise.resolve()),
+}));
+jest.mock(
+  'react-native-document-picker',
+  () => ({
+    types: { allFiles: 'allFiles' },
+    pick: jest.fn(() => Promise.resolve([])),
+    isCancel: jest.fn(() => false),
+  }),
+  { virtual: true },
+);
+jest.mock(
+  'react-native-receive-sharing-intent',
+  () => ({
+    getReceivedFiles: jest.fn(() => Promise.resolve([])),
+    clearReceivedFiles: jest.fn(),
+  }),
+  { virtual: true },
+);
+const mockWordArray = { toString: jest.fn(() => 'mockhash') };
+jest.mock('crypto-js', () => ({
+  enc: { Base64: { parse: jest.fn(() => mockWordArray) } },
+  SHA256: jest.fn(() => ({ toString: jest.fn(() => 'mockhash') })),
+  algo: { SHA256: { create: jest.fn(() => ({ update: jest.fn(() => ({})), finalize: jest.fn(() => mockWordArray) })) } },
+}));

@@ -8,6 +8,7 @@ import type { Book } from '../../../data/repositories/BookRepository';
 type Props = {
   book: Book;
   onPress: (id: string) => void;
+  onLongPress?: (id: string, title: string, format: string) => void;
   progress?: number; // 0..1
   highlight?: string[]; // tokens to bold per phase-2.md:6.1
 };
@@ -36,7 +37,7 @@ function HighlightedText({ text, tokens: highlightTokens, style, highlightStyle 
   );
 }
 
-export const BookCard = memo(function BookCard({ book, onPress, progress = 0, highlight }: Props) {
+export const BookCard = memo(function BookCard({ book, onPress, onLongPress, progress = 0, highlight }: Props) {
   const t = useAppTheme();
   const percent = Math.round(progress * 100);
 
@@ -44,6 +45,7 @@ export const BookCard = memo(function BookCard({ book, onPress, progress = 0, hi
     <Pressable
       testID={`book-card-${book.id}`}
       onPress={() => onPress(book.id)}
+      onLongPress={() => onLongPress?.(book.id, book.title, book.format)}
       accessibilityLabel={`${book.title} by ${book.author ?? 'Unknown'}, progress ${percent}%`}
       style={({ pressed }) => [styles.container, pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]}
     >

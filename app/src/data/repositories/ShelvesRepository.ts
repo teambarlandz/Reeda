@@ -23,4 +23,14 @@ export const ShelvesRepository = {
     const db = getDb();
     await db.execute('DELETE FROM book_shelves WHERE bookId = ? AND shelfId = ?;', [bookId, shelfId]);
   },
+
+  async getBookIdsForShelfName(name: string): Promise<string[]> {
+    const db = getDb();
+    const res: any = await db.execute(
+      `SELECT bookId FROM book_shelves JOIN shelves ON shelves.id = book_shelves.shelfId WHERE shelves.name = ?;`,
+      [name],
+    );
+    const rows = res.rows?._array ?? res.rows ?? [];
+    return rows.map((r: any) => r.bookId);
+  },
 };
