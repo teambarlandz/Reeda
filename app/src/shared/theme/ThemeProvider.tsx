@@ -1,9 +1,28 @@
-import React, { createContext, useMemo, useState, ReactNode } from 'react';
+import React, { createContext, useMemo, useState, useEffect, ReactNode } from 'react';
 import { tokens, readingThemes, ThemeMode, ReadingTheme, AppThemeTokens } from './tokens';
+
+const STORAGE_KEY = 'appTheme';
+const VALID_MODES: ThemeMode[] = ['light', 'neutralDark', 'warmDark'];
+
+async function loadAppTheme(): Promise<ThemeMode | null> {
+  try {
+    const { SettingsRepository } = await import('../../data/repositories/SettingsRepository');
+    const raw = await SettingsRepository.get(STORAGE_KEY);
+    if (raw && (VALID_MODES as string[]).includes(raw)) return raw as ThemeMode;
+  } catch {}
+  return null;
+}
+
+async function saveAppTheme(mode: ThemeMode): Promise<void> {
+  try {
+    const { SettingsRepository } = await import('../../data/repositories/SettingsRepository');
+    await SettingsRepository.set(STORAGE_KEY, mode);
+  } catch {}
+}
 
 type ThemeContextValue = {
   appTheme: ThemeMode;
-  setAppTheme: (m: ThemeMode) => void;
+  setAppTheme: (m: ThemeMode) => Promise<void>;
   readingTheme: ReadingTheme;
   setReadingTheme: (m: ReadingTheme) => void;
   appTokens: AppThemeTokens;
@@ -14,8 +33,20 @@ type ThemeContextValue = {
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [appTheme, setAppTheme] = useState<ThemeMode>('light');
+  const [appTheme, setAppThemeState] = useState<ThemeMode>('light');
   const [readingTheme, setReadingTheme] = useState<ReadingTheme>('sepia');
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'test') return;
+    loadAppTheme().then(saved => {
+      if (saved) setAppThemeState(saved);
+    });
+  }, []);
+
+  const setAppTheme = async (mode: ThemeMode) => {
+    setAppThemeState(mode);
+    await saveAppTheme(mode);
+  };
 
   const value = useMemo<ThemeContextValue>(() => {
     const appTokens = tokens[appTheme] as AppThemeTokens;

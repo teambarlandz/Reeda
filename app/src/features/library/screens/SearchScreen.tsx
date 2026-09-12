@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Clock, Trash2 } from '../../../shared/icons';
@@ -10,12 +10,13 @@ import { BookGrid } from '../components/BookGrid';
 import { useLibraryStore } from '../store/libraryStore';
 import { useLibraryBooks } from '../hooks/useLibraryBooks';
 import { useLibrarySearch } from '../hooks/useLibrarySearch';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SearchHistoryRepository } from '../../../data/repositories/SearchHistoryRepository';
 
 export function SearchScreen() {
   const t = useAppTheme();
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
   const { searchFacet, setSearchFacet } = useLibraryStore();
   const { query, onChange, committed } = useLibrarySearch();
   const { data: books } = useLibraryBooks();
@@ -24,6 +25,16 @@ export function SearchScreen() {
     queryKey: ['search_history'],
     queryFn: () => SearchHistoryRepository.list(),
   });
+
+  // Persist committed search to history (skip short/empty queries)
+  useEffect(() => {
+    const q = committed.trim();
+    if (q.length >= 2) {
+      SearchHistoryRepository.add(q).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['search_history'] });
+      });
+    }
+  }, [committed, queryClient]);
 
   const isTypingShort = committed.trim().length > 0 && committed.trim().length < 2;
   const showRecents = committed.trim().length === 0 || isTypingShort;

@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Dimensions, useWindowDimensions } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useReaderStore } from '../store/readerStore';
 import { readingThemes } from '../../../shared/theme/tokens';
 import type { ParsedChapter } from '../../../parsing/epub/parse';
@@ -17,7 +17,7 @@ export function PaginateMode({ chapters, initialPage = 1, onPageChange }: Props)
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const viewportHeight = height - 120; // approx
-  const pages = paginateChapters(chapters, viewportHeight, 1200);
+  const pages = useMemo(() => paginateChapters(chapters, viewportHeight, 1200), [chapters, viewportHeight]);
   const total = pages.length;
   const [page, setPage] = useState(initialPage);
 

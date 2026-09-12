@@ -8,3 +8,22 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# Hermes engine
+-keep class com.facebook.hermes.unicode.** { *; }
+-keep class com.facebook.jni.** { *; }
+
+# react-native-quick-sqlite
+-keep class com.reactnativequicksqlite.** { *; }
+
+# react-native-fast-image (Glide)
+-keep public class com.dylanvann.fastimage.** { *; }
+-keep public class com.bumptech.glide.** { *; }
+
+# react-native-svg
+-keep public class com.horcrux.svg.** { *; }
+
+# react-native-fs (RNFS)
+-keep class com.facebook.react.modules.network.** { *; }
+-keep class com.ihn.** { *; }
+-keep class org.devio.** { *; }

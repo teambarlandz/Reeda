@@ -5,6 +5,7 @@ export {
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
   Bookmark,
   Heart,
   Library,

@@ -6,6 +6,7 @@ import { SearchScreen } from '../../features/library/screens/SearchScreen';
 import { BookDetailsScreen } from '../../features/details/BookDetailsScreen';
 import { ReaderScreen } from '../../features/reader/screens/ReaderScreen';
 import { ImportScreen } from '../../features/import/ImportScreen';
+import { SettingsScreen } from '../../features/settings/screens/SettingsScreen';
 
 export type RootStackParamList = {
   Library: undefined;
@@ -13,6 +14,7 @@ export type RootStackParamList = {
   Reader: { bookId: string };
   Search: undefined;
   Import: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -26,6 +28,7 @@ export function RootNavigator() {
         <Stack.Screen name="BookDetails" component={BookDetailsScreen} />
         <Stack.Screen name="Reader" component={ReaderScreen} />
         <Stack.Screen name="Import" component={ImportScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

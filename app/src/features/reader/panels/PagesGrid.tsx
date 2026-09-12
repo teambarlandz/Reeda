@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, FlatList } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, FlatList, useWindowDimensions } from 'react-native';
 import { X } from '../../../shared/icons';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { typography, spacing, radius } from '../../../shared/theme/tokens';
@@ -14,8 +14,15 @@ type Props = {
 
 export function PagesGrid({ visible, totalPages, currentPage, onClose, onSelect }: Props) {
   const t = useAppTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  const pages = useMemo(() => Array.from({ length: totalPages }, (_, i) => i + 1), [totalPages]);
+  // Estimated row height for getItemLayout: 3-column grid, thumbs aspectRatio 3/4,
+  // overlay padding lg(16)×2 + list padding md(12)×2 + column gaps sm(8)×2, row gap sm(8)
+  const rowHeight = useMemo(() => {
+    const itemWidth = (screenWidth - spacing.xl * 2 - spacing.md * 2 - spacing.sm * 2) / 3;
+    return (itemWidth * 4) / 3 + spacing.sm;
+  }, [screenWidth]);
   if (!visible) return null;
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
   return (
     <View style={[styles.overlay, { backgroundColor: t.bgPrimary }]} accessibilityElementsHidden={!visible} importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}>
       <View style={styles.header}>
@@ -30,6 +37,14 @@ export function PagesGrid({ visible, totalPages, currentPage, onClose, onSelect 
         keyExtractor={item => String(item)}
         contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}
         columnWrapperStyle={{ gap: spacing.sm }}
+        windowSize={5}
+        maxToRenderPerBatch={9}
+        removeClippedSubviews={true}
+        getItemLayout={(_, index) => ({
+          length: rowHeight,
+          offset: Math.floor(index / 3) * rowHeight,
+          index,
+        })}
         renderItem={({ item }) => (
           <Pressable
             onPress={() => onSelect(item)}

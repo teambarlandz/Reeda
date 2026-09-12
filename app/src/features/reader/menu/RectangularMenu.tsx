@@ -6,6 +6,7 @@ import { useAppTheme } from '../../../shared/theme/useTheme';
 import { radius, elevation } from '../../../shared/theme/tokens';
 import { MenuItem } from './MenuItem';
 import {
+  ArrowLeft,
   BookOpen,
   Bookmark,
   Highlighter,
@@ -31,6 +32,7 @@ type Props = {
 };
 
 const ITEMS: Array<{ key: string; label: string; icon: any; disabledIcon?: any }> = [
+  { key: 'exit', label: 'Library', icon: ArrowLeft },
   { key: 'chapters', label: 'Chapters', icon: BookOpen },
   { key: 'bookmarks', label: 'Bookmarks', icon: Bookmark },
   { key: 'highlights', label: 'Highlights', icon: Highlighter },

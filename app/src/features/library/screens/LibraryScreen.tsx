@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { typography, spacing } from '../../../shared/theme/tokens';
-import { SlidersHorizontal, Upload, Library } from '../../../shared/icons';
+import { SlidersHorizontal, Upload, Library, Settings } from '../../../shared/icons';
 import { Button } from '../../../shared/ui';
 import { BookGrid } from '../components/BookGrid';
 import { SearchBar } from '../components/SearchBar';
@@ -141,6 +141,9 @@ export function LibraryScreen() {
           <TouchableOpacity onPress={() => setShowShelves(true)} style={styles.iconBtn} testID="shelves-btn">
             <Library size={20} color={t.iconTint} />
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconBtn} testID="settings-btn" accessibilityLabel="Settings" accessibilityRole="button">
+            <Settings size={20} color={t.iconTint} />
+          </TouchableOpacity>
           <View style={[styles.avatar, { backgroundColor: t.avatarBg }]}>
             <Text style={{ color: t.textInverse }}>S</Text>
           </View>
@@ -180,6 +183,9 @@ export function LibraryScreen() {
         <TouchableOpacity onPress={() => setShowShelves(true)} style={styles.iconBtn} testID="shelves-btn">
           <Library size={20} color={t.iconTint} />
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.iconBtn} testID="settings-btn" accessibilityLabel="Settings" accessibilityRole="button">
+          <Settings size={20} color={t.iconTint} />
+        </TouchableOpacity>
         <View style={[styles.avatar, { backgroundColor: t.avatarBg }]}>
           <Text style={{ color: t.textInverse }}>S</Text>
         </View>
@@ -199,7 +205,7 @@ export function LibraryScreen() {
           <Text style={[typography.caption, { color: t.textSecondary }]}>5 columns</Text>
         </View>
 
-        <BookGrid books={books} onPress={handleBookPress} onLongPress={handleDelete} progressMap={progressMap} highlightTokens={highlightTokens} numColumns={5} />
+        <BookGrid books={books} onPress={handleBookPress} onLongPress={handleDelete} progressMap={progressMap} highlightTokens={highlightTokens} numColumns={5} showFileSize />
 
         <StatsWidget />
 
@@ -209,7 +215,7 @@ export function LibraryScreen() {
             All
           </Text>
         </View>
-        <BookGrid books={[...books].sort((a, b) => b.addedAt - a.addedAt).slice(0, 5)} onPress={handleBookPress} onLongPress={handleDelete} progressMap={progressMap} numColumns={5} />
+        <BookGrid books={[...books].sort((a, b) => b.addedAt - a.addedAt).slice(0, 5)} onPress={handleBookPress} onLongPress={handleDelete} progressMap={progressMap} numColumns={5} showFileSize />
       </ScrollView>
 
       <FilterSheet visible={showFilter} onClose={() => setShowFilter(false)} />

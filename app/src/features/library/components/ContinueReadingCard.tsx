@@ -14,7 +14,7 @@ export function ContinueReadingCard({ book, progress, onResume }: Props) {
   return (
     <Card style={[styles.card, { backgroundColor: t.bgCard, padding: spacing.lg }]}>
       <FastImage
-        source={book.coverPath ? { uri: `file://${book.coverPath}` } : undefined}
+        source={book.coverPath ? { uri: `file://${book.coverPath}`, cache: FastImage.cacheControl.immutable } : undefined}
         style={[styles.cover, { backgroundColor: t.bgSearch }]}
       />
       <View style={styles.content}>

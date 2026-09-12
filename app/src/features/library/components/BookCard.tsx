@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Dimensions } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import { useAppTheme } from '../../../shared/theme/useTheme';
@@ -11,6 +11,7 @@ type Props = {
   onLongPress?: (id: string, title: string, format: string) => void;
   progress?: number; // 0..1
   highlight?: string[]; // tokens to bold per phase-2.md:6.1
+  showFileSize?: boolean;
 };
 
 function escapeRegExp(s: string) {
@@ -37,9 +38,21 @@ function HighlightedText({ text, tokens: highlightTokens, style, highlightStyle 
   );
 }
 
-export const BookCard = memo(function BookCard({ book, onPress, onLongPress, progress = 0, highlight }: Props) {
+export const BookCard = memo(function BookCard({ book, onPress, onLongPress, progress = 0, highlight, showFileSize }: Props) {
   const t = useAppTheme();
   const percent = Math.round(progress * 100);
+  const fileSizeLabel = showFileSize && book.fileSize
+    ? book.fileSize < 1024 * 1024
+      ? `${(book.fileSize / 1024).toFixed(0)} KB`
+      : `${(book.fileSize / (1024 * 1024)).toFixed(1)} MB`
+    : null;
+
+  // Preload cover into FastImage cache on mount
+  useEffect(() => {
+    if (book.coverPath) {
+      void FastImage.preload([{ uri: `file://${book.coverPath}` }]).catch(() => {});
+    }
+  }, [book.coverPath]);
 
   return (
     <Pressable
@@ -52,7 +65,7 @@ export const BookCard = memo(function BookCard({ book, onPress, onLongPress, pro
       <View style={[styles.coverWrap, { backgroundColor: t.bgCard, borderRadius: radius.md, shadowColor: t.shadowColor }, { elevation: 2 }]}>
         {book.coverPath ? (
           <FastImage
-            source={{ uri: `file://${book.coverPath}`, priority: FastImage.priority.normal }}
+            source={{ uri: `file://${book.coverPath}`, priority: FastImage.priority.normal, cache: FastImage.cacheControl.immutable }}
             style={styles.cover}
             resizeMode={FastImage.resizeMode.cover}
           />
@@ -77,7 +90,9 @@ export const BookCard = memo(function BookCard({ book, onPress, onLongPress, pro
         <View style={[styles.track, { backgroundColor: t.accentTrack }]}>
           <View style={[styles.fill, { backgroundColor: t.textPrimary, width: `${percent}%` }]} />
         </View>
-        <Text style={[typography.caption, { color: t.textSecondary, marginLeft: spacing.xs }]}>{percent}%</Text>
+        <Text style={[typography.caption, { color: t.textSecondary, marginLeft: spacing.xs }]}>
+          {fileSizeLabel ? `${percent}% · ${fileSizeLabel}` : `${percent}%`}
+        </Text>
       </View>
     </Pressable>
   );

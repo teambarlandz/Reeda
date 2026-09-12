@@ -52,7 +52,7 @@ export function BookDetailsScreen() {
       <View style={{ alignItems: 'center' }}>
         <Card style={{ width: 180, aspectRatio: 3 / 4, overflow: 'hidden', borderRadius: radius.lg }}>
           {book.coverPath ? (
-            <FastImage source={{ uri: `file://${book.coverPath}` }} style={{ width: '100%', height: '100%' }} resizeMode={FastImage.resizeMode.cover} />
+            <FastImage source={{ uri: `file://${book.coverPath}`, cache: FastImage.cacheControl.immutable }} style={{ width: '100%', height: '100%' }} resizeMode={FastImage.resizeMode.cover} />
           ) : (
             <View style={{ flex: 1, backgroundColor: t.bgSearch, justifyContent: 'center', alignItems: 'center' }}>
               <Text style={[typography.heading, { color: t.textSecondary }]}>{book.title.slice(0, 2).toUpperCase()}</Text>

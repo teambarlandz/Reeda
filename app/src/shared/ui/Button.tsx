@@ -9,9 +9,10 @@ type Props = {
   variant?: 'primary' | 'secondary' | 'ghost';
   disabled?: boolean;
   testID?: string;
+  accessibilityLabel?: string;
 };
 
-export function Button({ title, onPress, variant = 'primary', disabled, testID }: Props) {
+export function Button({ title, onPress, variant = 'primary', disabled, testID, accessibilityLabel }: Props) {
   const t = useAppTheme();
   const containerStyle: ViewStyle = {
     backgroundColor: variant === 'primary' ? t.buttonPrimaryBg : variant === 'secondary' ? t.bgSearch : 'transparent',
@@ -27,7 +28,7 @@ export function Button({ title, onPress, variant = 'primary', disabled, testID }
     color: variant === 'ghost' ? t.textSecondary : t.buttonPrimaryText,
   };
   return (
-    <Pressable testID={testID} onPress={onPress} disabled={disabled} style={({ pressed }) => [containerStyle, pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]} accessibilityLabel={title} accessibilityRole="button">
+    <Pressable testID={testID} onPress={onPress} disabled={disabled} style={({ pressed }) => [containerStyle, pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]} accessibilityLabel={accessibilityLabel ?? title} accessibilityRole="button">
       <Text style={textStyle}>{title}</Text>
     </Pressable>
   );

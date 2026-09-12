@@ -227,6 +227,10 @@ export function ReaderScreen() {
 
   const handleMenuSelect = useCallback(
     async (key: string) => {
+      if (key === 'exit') {
+        navigation.goBack();
+        return;
+      }
       const panelMap: Record<string, any> = {
         chapters: 'toc',
         bookmarks: 'bookmarks',
@@ -273,7 +277,7 @@ export function ReaderScreen() {
         setActivePanel(null);
       }
     },
-    [setActivePanel, hasTextLayer, engineAvailable, book?.format, hasTextLayerForBook, toggleTtsActive],
+    [setActivePanel, hasTextLayer, engineAvailable, book?.format, hasTextLayerForBook, toggleTtsActive, navigation],
   );
 
   const handleTocSelect = useCallback(

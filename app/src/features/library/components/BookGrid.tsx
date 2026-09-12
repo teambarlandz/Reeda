@@ -11,12 +11,13 @@ type Props = {
   progressMap?: Record<string, number>;
   highlightTokens?: string[];
   numColumns?: number;
+  showFileSize?: boolean;
 };
 
 const SCREEN_PADDING = spacing.xl * 2; // 20*2 = 40
 const GAP = spacing.md; // 12
 
-export function BookGrid({ books, onPress, onLongPress, progressMap, highlightTokens, numColumns = 5 }: Props) {
+export function BookGrid({ books, onPress, onLongPress, progressMap, highlightTokens, numColumns = 5, showFileSize }: Props) {
   const screenWidth = Dimensions.get('window').width;
   const available = screenWidth - SCREEN_PADDING - (numColumns - 1) * GAP;
   const columnWidth = available / numColumns;
@@ -51,6 +52,7 @@ export function BookGrid({ books, onPress, onLongPress, progressMap, highlightTo
           onLongPress={onLongPress}
           progress={progressMap?.[item.id] ?? 0}
           highlight={highlightTokens}
+          showFileSize={showFileSize}
         />
       )}
     />
