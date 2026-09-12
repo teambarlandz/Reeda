@@ -16,14 +16,15 @@ type Props = {
   onBookmarkPress: () => void;
   onColorPress: () => void;
   onMenuPress: () => void;
+  reducedMotion?: boolean;
 };
 
-export function ReadingToolbar({ visible, page, chapterName, isBookmarked, highlightColor, onPagePress, onChapterPress, onBookmarkPress, onColorPress, onMenuPress }: Props) {
+export function ReadingToolbar({ visible, page, chapterName, isBookmarked, highlightColor, onPagePress, onChapterPress, onBookmarkPress, onColorPress, onMenuPress, reducedMotion = false }: Props) {
   const t = useAppTheme();
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: withTiming(visible ? 0 : 100, { duration: 250 }) }],
-    opacity: withTiming(visible ? 1 : 0, { duration: 200 }),
+    transform: [{ translateY: withTiming(visible ? 0 : 100, { duration: reducedMotion ? 0 : 250 }) }],
+    opacity:    withTiming(visible ? 1 : 0, { duration: reducedMotion ? 0 : 200 }),
   }));
 
   return (

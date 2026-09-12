@@ -48,7 +48,7 @@ export function TTSSettings({ visible, onClose }: Props) {
       <Pressable style={{ flex: 1 }} onPress={onClose} testID="tts-settings-dim" />
       <View style={[styles.panel, { backgroundColor: t.bgCard }, elevation.lg]} testID="tts-settings">
         <View style={styles.header}>
-          <Text style={[typography.heading, { color: t.textPrimary }]}>Read Aloud Settings</Text>
+          <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Read Aloud Settings</Text>
           <Pressable onPress={onClose} testID="tts-settings-close">
             <X size={24} color={t.iconTint} />
           </Pressable>

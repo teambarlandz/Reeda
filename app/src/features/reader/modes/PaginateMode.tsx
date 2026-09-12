@@ -44,7 +44,7 @@ export function PaginateMode({ chapters, initialPage = 1, onPageChange }: Props)
     return (
       <View testID="paginate-mode" style={[styles.container, { backgroundColor: colors.bg, padding: margins, flexDirection: 'row', gap: margins }]}>
         <View style={styles.content}>
-          <Text style={{ color: colors.text, fontSize, lineHeight: fontSize * lineHeight }}>{textSlice}</Text>
+        <Text style={{ color: colors.text, fontSize, lineHeight: fontSize * lineHeight }} accessible accessibilityRole="text">{textSlice}</Text>
         </View>
         <View style={[styles.content, { borderLeftWidth: 1, borderLeftColor: colors.text + '20', paddingLeft: margins }]}>
           <Text style={{ color: colors.text, fontSize, lineHeight: fontSize * lineHeight }}>{nextSlice}</Text>
@@ -67,7 +67,7 @@ export function PaginateMode({ chapters, initialPage = 1, onPageChange }: Props)
   return (
     <View testID="paginate-mode" style={[styles.container, { backgroundColor: colors.bg, padding: margins }]}>
       <View style={styles.content}>
-        <Text style={{ color: colors.text, fontSize, lineHeight: fontSize * lineHeight }}>{textSlice}</Text>
+        <Text style={{ color: colors.text, fontSize, lineHeight: fontSize * lineHeight }} accessible accessibilityRole="text">{textSlice}</Text>
       </View>
       <View style={styles.navRow}>
         <Pressable onPress={() => go(-1)} testID="paginate-prev" style={styles.navBtn}>

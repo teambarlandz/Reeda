@@ -12,7 +12,7 @@ type Props = {
 export function ImportProgressRow({ fileName, fileSize, status }: Props) {
   const t = useAppTheme();
   return (
-    <View style={[styles.row, { backgroundColor: t.bgCard }]} testID={`import-progress-${fileName}`}>
+    <View style={[styles.row, { backgroundColor: t.bgCard }]} testID={`import-progress-${fileName}`} accessibilityLabel={`Importing ${fileName}: ${status}`} accessibilityRole="text">
       <ActivityIndicator size="small" color={t.textPrimary} />
       <View style={{ flex: 1, marginLeft: spacing.md }}>
         <Text style={[typography.body, { color: t.textPrimary }]} numberOfLines={1}>

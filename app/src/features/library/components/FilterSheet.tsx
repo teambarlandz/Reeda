@@ -16,13 +16,16 @@ export function FilterSheet({ visible, onClose }: Props) {
   return (
     <Sheet visible={visible} onClose={onClose} height="60%">
       <View style={{ padding: spacing.xl }}>
-        <Text style={[typography.heading, { color: t.textPrimary, marginBottom: spacing.lg }]}>Sort & Filter</Text>
+        <Text style={[typography.heading, { color: t.textPrimary, marginBottom: spacing.lg }]} accessibilityRole="header">Sort & Filter</Text>
         <Text style={[typography.title, { color: t.textPrimary }]}>Sort by</Text>
         <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
           {(['recent', 'title', 'author'] as const).map(s => (
             <Text
               key={s}
               onPress={() => setSort(s)}
+              accessibilityLabel={`Sort by ${s}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: sort === s }}
               style={[typography.body, { color: sort === s ? t.textPrimary : t.textSecondary, padding: spacing.sm, backgroundColor: sort === s ? t.bgSearch : 'transparent', borderRadius: 8 }]}
             >
               {s}
@@ -31,7 +34,7 @@ export function FilterSheet({ visible, onClose }: Props) {
         </View>
         <Text style={[typography.title, { color: t.textPrimary, marginTop: spacing.lg }]}>Filter by Shelf</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm }}>
-          <Pressable onPress={() => setFilter(null)} style={{ padding: spacing.sm, backgroundColor: !filter ? t.bgCardDark : t.bgSearch, borderRadius: radius.full }}>
+          <Pressable onPress={() => setFilter(null)} style={{ padding: spacing.sm, backgroundColor: !filter ? t.bgCardDark : t.bgSearch, borderRadius: radius.full }} accessibilityLabel="Show all shelves" accessibilityRole="button">
             <Text style={[typography.caption, { color: !filter ? t.textInverse : t.textSecondary }]}>All</Text>
           </Pressable>
           {(shelves ?? []).map((s: any) => (
@@ -40,6 +43,9 @@ export function FilterSheet({ visible, onClose }: Props) {
               onPress={() => setFilter(s.name)}
               style={{ padding: spacing.sm, backgroundColor: filter === s.name ? t.bgCardDark : t.bgSearch, borderRadius: radius.full }}
               testID={`filter-shelf-${s.name}`}
+              accessibilityLabel={`Filter by ${s.name}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filter === s.name }}
             >
               <Text style={[typography.caption, { color: filter === s.name ? t.textInverse : t.textSecondary }]}>{s.name}</Text>
             </Pressable>

@@ -25,7 +25,7 @@ export function TOCPanel({ visible, chapters, currentChapterId, onClose, onSelec
       <Pressable style={styles.dim} onPress={onClose} />
       <View style={[styles.panel, { backgroundColor: t.bgCard, borderTopRightRadius: radius.lg, borderBottomRightRadius: radius.lg }]}>
         <View style={styles.header}>
-          <Text style={[typography.heading, { color: t.textPrimary }]}>Table of Contents</Text>
+          <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Table of Contents</Text>
           <Pressable onPress={onClose} hitSlop={8} testID="toc-close">
             <X size={24} color={t.iconTint} />
           </Pressable>

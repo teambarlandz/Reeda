@@ -46,4 +46,10 @@ export const BookmarkRepository = {
     const db = getDb();
     await db.execute('DELETE FROM bookmarks WHERE id = ?;', [id]);
   },
+
+  async listAll(): Promise<Bookmark[]> {
+    const db = getDb();
+    const res: any = await db.execute('SELECT * FROM bookmarks ORDER BY createdAt DESC;');
+    return res.rows?._array ?? res.rows ?? [];
+  },
 };

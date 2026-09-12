@@ -42,8 +42,8 @@ export function ShelvesSheet({ visible, onClose, bookId }: Props) {
   return (
     <Sheet visible={visible} onClose={onClose} height="50%">
       <View style={styles.header}>
-        <Text style={[typography.heading, { color: t.textPrimary }]}>Shelves</Text>
-        <Pressable onPress={onClose} testID="shelves-close">
+        <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Shelves</Text>
+        <Pressable onPress={onClose} testID="shelves-close" accessibilityLabel="Close shelves" accessibilityRole="button">
           <X size={24} color={t.iconTint} />
         </Pressable>
       </View>
@@ -56,8 +56,10 @@ export function ShelvesSheet({ visible, onClose, bookId }: Props) {
             onChangeText={setNewName}
             style={[typography.body, { color: t.textPrimary, flex: 1, paddingVertical: 0 }]}
             testID="shelf-input"
+            accessibilityLabel="New shelf name"
+            returnKeyType="done"
           />
-          <Pressable onPress={handleCreate} style={[styles.addBtn, { backgroundColor: t.bgCardDark }]} testID="shelf-create">
+          <Pressable onPress={handleCreate} style={[styles.addBtn, { backgroundColor: t.bgCardDark }]} testID="shelf-create" accessibilityLabel="Create shelf" accessibilityRole="button">
             <Plus size={16} color={t.textInverse} />
           </Pressable>
         </View>
@@ -75,6 +77,8 @@ export function ShelvesSheet({ visible, onClose, bookId }: Props) {
                       queryClient.invalidateQueries({ queryKey: ['books'] });
                     }}
                     style={[styles.assignBtn, { backgroundColor: t.bgCard }]}
+                    accessibilityLabel={`Assign to ${item.name}`}
+                    accessibilityRole="button"
                   >
                     <Text style={[typography.caption, { color: t.textSecondary }]}>Assign</Text>
                   </Pressable>
@@ -82,6 +86,8 @@ export function ShelvesSheet({ visible, onClose, bookId }: Props) {
                     onPress={() => handleRemove(item.id)}
                     style={[styles.removeBtn, { backgroundColor: t.bgCard }]}
                     testID={`shelf-remove-${item.id}`}
+                    accessibilityLabel={`Remove from ${item.name}`}
+                    accessibilityRole="button"
                   >
                     <Trash2 size={14} color={t.textSecondary} />
                   </Pressable>

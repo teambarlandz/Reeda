@@ -28,7 +28,7 @@ export function DictionaryCard({ visible, word, definition, partOfSpeech, exampl
       <View style={[styles.card, { backgroundColor: t.bgCard, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }, elevation.md]}>
         <View style={styles.header}>
           <View>
-            <Text style={[typography.title, { color: t.textPrimary, fontSize: 18 }]}>{word}</Text>
+            <Text style={[typography.title, { color: t.textPrimary, fontSize: 18 }]} accessibilityRole="header">{word}</Text>
             {partOfSpeech && <Text style={[typography.caption, { color: t.textSecondary }]}>{partOfSpeech}</Text>}
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>

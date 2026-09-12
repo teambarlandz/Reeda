@@ -24,6 +24,7 @@ export function BookmarkButton({ isBookmarked, onToggle, visible = true }: Props
       style={({ pressed }) => [styles.btn, pressed && { opacity: 0.7 }]}
       testID="bookmark-button"
       accessibilityLabel={isBookmarked ? 'Remove bookmark' : 'Add bookmark'}
+      accessibilityRole="button"
     >
       <Animated.View style={scale}>
         <Bookmark size={20} color={isBookmarked ? t.textPrimary : t.iconTint} fill={isBookmarked ? t.textPrimary : 'none'} />

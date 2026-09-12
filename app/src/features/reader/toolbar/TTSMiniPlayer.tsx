@@ -83,6 +83,7 @@ export function TTSMiniPlayer({ visible, onTogglePlay, onSkipBack, onSkipForward
         style={[styles.playBtn, { backgroundColor: disabled ? t.divider : t.bgCardDark, opacity: disabled ? 0.4 : 1 }]}
         testID="tts-play-pause"
         accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+        accessibilityRole="button"
       >
         {disabled ? (
           <VolumeX size={20} color={t.textInverse} />
@@ -94,14 +95,14 @@ export function TTSMiniPlayer({ visible, onTogglePlay, onSkipBack, onSkipForward
       </Pressable>
 
       {/* 2 Chapter/Page label — tap opens TOC */}
-      <Pressable onPress={onOpenToc} style={styles.labelWrap} testID="tts-label" hitSlop={8}>
+      <Pressable onPress={onOpenToc} style={styles.labelWrap} testID="tts-label" hitSlop={8} accessibilityLabel={disabled ? 'No readable text' : label} accessibilityRole="button">
         <Text style={[typography.body, { color: t.textPrimary, maxWidth: 100 }]} numberOfLines={1}>
           {disabled ? 'No readable text' : label}
         </Text>
       </Pressable>
 
       {/* 3 Progress scrubber — fills center, drag to seek within chapter per spec */}
-      <View style={styles.scrubberWrap} onLayout={e => (width.value = e.nativeEvent.layout.width)} testID="tts-scrubber">
+      <View style={styles.scrubberWrap} onLayout={e => (width.value = e.nativeEvent.layout.width)} testID="tts-scrubber" accessibilityLabel={`Read aloud progress: ${Math.round(progress * 100)}%`} accessibilityRole="adjustable">
         <GestureDetector gesture={pan}>
           <View style={[styles.track, { backgroundColor: t.accentTrack }]}>
             <View style={[styles.fill, { backgroundColor: t.textPrimary, width: `${Math.round(progress * 100)}%` }]} />
@@ -112,22 +113,22 @@ export function TTSMiniPlayer({ visible, onTogglePlay, onSkipBack, onSkipForward
       </View>
 
       {/* 4 Speed control — cycles 0.5x … 3x */}
-      <Pressable onPress={onCycleRate} style={styles.speedBtn} testID="tts-speed" hitSlop={8} disabled={disabled}>
+      <Pressable onPress={onCycleRate} style={styles.speedBtn} testID="tts-speed" hitSlop={8} disabled={disabled} accessibilityLabel={`Speed: ${rate}x`} accessibilityRole="button">
         <Text style={[typography.caption, { color: t.textSecondary, opacity: disabled ? 0.4 : 1 }]}>{rate}x</Text>
       </Pressable>
 
       {/* 5 Skip back */}
-      <Pressable onPress={onSkipBack} style={styles.iconBtn} testID="tts-skip-back" hitSlop={8} disabled={disabled}>
+      <Pressable onPress={onSkipBack} style={styles.iconBtn} testID="tts-skip-back" hitSlop={8} disabled={disabled} accessibilityLabel="Skip back" accessibilityRole="button">
         <SkipBack size={18} color={t.iconTint} style={{ opacity: disabled ? 0.4 : 1 }} />
       </Pressable>
 
       {/* 6 Skip forward */}
-      <Pressable onPress={onSkipForward} style={styles.iconBtn} testID="tts-skip-forward" hitSlop={8} disabled={disabled}>
+      <Pressable onPress={onSkipForward} style={styles.iconBtn} testID="tts-skip-forward" hitSlop={8} disabled={disabled} accessibilityLabel="Skip forward" accessibilityRole="button">
         <SkipForward size={18} color={t.iconTint} style={{ opacity: disabled ? 0.4 : 1 }} />
       </Pressable>
 
       {/* 7 Dismiss */}
-      <Pressable onPress={onDismiss} style={styles.iconBtn} testID="tts-dismiss" hitSlop={8} accessibilityLabel="Dismiss read aloud">
+      <Pressable onPress={onDismiss} style={styles.iconBtn} testID="tts-dismiss" hitSlop={8} accessibilityLabel="Dismiss read aloud" accessibilityRole="button">
         <X size={18} color={t.iconTint} />
       </Pressable>
     </Animated.View>

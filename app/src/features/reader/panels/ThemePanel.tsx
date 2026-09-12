@@ -35,7 +35,7 @@ export function ThemePanel({ visible, onClose }: Props) {
       <Pressable style={{ flex: 1 }} onPress={onClose} />
       <View style={[styles.panel, { backgroundColor: t.bgCard, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }]}>
         <View style={styles.header}>
-          <Text style={[typography.heading, { color: t.textPrimary }]}>Font & Theme</Text>
+          <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Font & Theme</Text>
           <Pressable onPress={onClose} testID="theme-close">
             <X size={24} color={t.iconTint} />
           </Pressable>

@@ -33,9 +33,10 @@ export function SearchBar({ value, onChangeText, onSubmit, onClear, placeholder 
         autoCapitalize="none"
         autoFocus={autoFocus}
         accessibilityLabel="Search books by title, author, genre or shelf"
+        accessibilityRole="search"
       />
       {value.length > 0 && (
-        <Pressable onPress={onClear} hitSlop={8} testID={`${testID}-clear`}>
+        <Pressable onPress={onClear} hitSlop={8} testID={`${testID}-clear`} accessibilityLabel="Clear search" accessibilityRole="button">
           <X size={20} color={t.iconTint} />
         </Pressable>
       )}

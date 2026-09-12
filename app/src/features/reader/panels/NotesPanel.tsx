@@ -29,7 +29,7 @@ export function NotesPanel({ visible, bookId, onClose, onSelect, onNew }: Props)
       <Pressable style={{ flex: 1 }} onPress={onClose} />
       <View style={[styles.panel, { backgroundColor: t.bgCard, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }]}>
         <View style={styles.header}>
-          <Text style={[typography.heading, { color: t.textPrimary }]}>Notes</Text>
+          <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Notes</Text>
           <Pressable onPress={onClose} testID="notes-close">
             <X size={24} color={t.iconTint} />
           </Pressable>

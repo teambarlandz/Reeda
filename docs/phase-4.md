@@ -36,6 +36,7 @@ If a rule above is broken, the milestone does not pass review.
 | **M6** | Read Aloud (TTS) | Week 10 | Toggle Read Aloud from menu or toolbar → mini-player (play/pause/skip/speed/scrub/dismiss) → sleep timer → expanded player + voice picker → background playback with notification → highlight-synced word underline |
 | **M7** | Stats & Goals | Week 11 | See daily goal progress, streak, time spent, estimated remaining, and 7-day history graph — all derived from `reading_sessions` that have been recorded since M3 |
 | **M8** | Polish, A11y, Perf & Release Prep | Week 12 | 60 FPS @ 1000+ books, <2s cold start, TalkBack + reduced-motion + high-contrast correct, R8 + signing + Play listing assets ready |
+| **M8-Ext** | A11y, Perf, Dark Chrome, Settings, PDF Text & Release Hardening | Week 12+ (parallel) | Full TalkBack coverage, reduced-motion, FastImage cache + PagesGrid virtualization, R8 enabled, release signing wired, Settings screen with dark mode toggle + Privacy/Terms, custom icon + splash, CI assembleRelease green, PDF text extraction (embedded + OCR) → TTS + highlights + search work on PDFs |
 
 > Solo-dev estimate = 12 weeks if milestones are not skipped or reordered. Small team (3) = ~6 weeks by parallelizing M3+M5 after M2. Reordering milestones creates dead code (see Section 6) — avoid it.
 
@@ -322,6 +323,132 @@ Each milestone lists **Builds** (new scripts/modules), **Depends On** (what must
 
 ---
 
+### M8-Extension — A11y, Perf, Dark Chrome, Settings & Release Hardening
+
+> **Additive to M8.** M8 covers the *intent*; this extension covers every gap found during the pre-release audit. No feature is added — every change is inside already-wired components. All items are grouped by area so they can be parallelized across contributors.
+
+**Goal:** Close every accessibility, performance, theming, settings, and release gap so the app is Play-review-ready and passes the M8 verification gate (Section 3, M8).
+
+**Builds (no new screens — all changes are inside existing files):**
+
+#### A — Accessibility (TalkBack, Keyboard, Reduced Motion)
+
+| # | Task | Files Changed | Spec Reference |
+|---|------|---------------|----------------|
+| A1 | Add `accessibilityLabel` + `accessibilityRole="button"` to every `Pressable`/`TouchableOpacity` in `SelectionToolbar.tsx`, `HighlightPicker.tsx`, `NoteSheet.tsx`, `BookmarkButton.tsx` | `SelectionToolbar.tsx`, `HighlightPicker.tsx`, `NoteSheet.tsx` | `phase-3-reader.md:8` — selection toolbar announces "Copy, Highlight, Add note, Define, Share" |
+| A2 | Add `accessibilityLabel` + `accessibilityRole="button"` + `accessibilityState={{ expanded: activeItem === key }}` to every `MenuItem.tsx` entry | `MenuItem.tsx` | `phase-3-reader.md:8` — menu items announce name and state |
+| A3 | Add `accessibilityLabel` + `accessibilityRole="adjustable"` to `ProgressStrip` thumb, `TTSMiniPlayer` scrubber, and `Slider` shared primitive | `ProgressStrip.tsx`, `TTSMiniPlayer.tsx`, `shared/ui/Slider.tsx` | `phase-3-reader.md:8` — sliders announce value |
+| A4 | Add `accessibilityLabel` + `accessibilityRole="header"` to all panel headers: `TOCPanel`, `HighlightsPanel`, `NotesPanel`, `BookmarksPanel`, `DictionaryCard`, `SearchSheet`, `ThemePanel`, `TTSSettings`, `TTSExpandedPlayer`, `ProgressSheet`, `PagesGrid` | All panel files | `phase-3-reader.md:8` — panels announce title on open |
+| A5 | Add `accessibilityLabel` + `accessibilityRole="search"` to `SearchBar` header field and `accessibilityRole="tablist"` / `role="tab"` to `FacetChips` | `SearchBar.tsx`, `FacetChips.tsx` | `phase-3.md:3.9` — search and facet chips |
+| A6 | Add `accessibilityLabel` to `FilterSheet`, `ShelvesSheet`, `BookDetailsScreen` action buttons, `ImportFlow` progress rows, `ImportErrorRow` | `FilterSheet.tsx`, `ShelvesSheet.tsx`, `BookDetailsScreen.tsx`, `ImportFlow.tsx`, `ImportErrorRow.tsx` | General a11y — every interactive element must be labelled |
+| A7 | Add `accessibilityLabel` + `accessibilityRole="button"` to all `shared/ui` primitives: `Button`, `Card` (if tappable), `Pill`, `Toggle`, `SegmentedControl` | `shared/ui/Button.tsx`, `Card.tsx`, `Pill.tsx`, `Toggle.tsx`, `SegmentedControl.tsx` | Every consumer inherits these — fix once, fix everywhere |
+| A8 | Add `KeyboardAvoidingView` wrapper + `keyboardShouldPersistTaps="handled"` + Tab-order (`returnKeyType`, `onSubmitEditing`) + Enter=Save / Escape=Cancel to `NoteSheet.tsx` | `NoteSheet.tsx` | `phase-3-reader.md:3.4.4` — keyboard/external input |
+| A9 | Add `AccessibilityInfo` detection: subscribe to `reduceMotionChanged` in `ReaderScreen.tsx` → conditionally disable `PageTransition` animation (use instant instead of slide/curl), disable menu slide animation, disable toolbar auto-hide animation | `ReaderScreen.tsx`, `PageTransition.tsx`, `RectangularMenu.tsx`, `ReadingToolbar.tsx` | `phase-3-reader.md:5.3` — reduced-motion branches |
+| A10 | Add `AccessibilityInfo` subscription in `TtsEngine` or `TTSMiniPlayer`: when TalkBack is active, duck TTS volume or pause TTS; resume when TalkBack finishes | `TTSMiniPlayer.tsx` or new hook `useTalkBackDetection.ts` | `phase-3-reader.md:8` — TTS + TalkBack conflict |
+| A11 | Add `importantForAccessibility` and `accessibilityElementsHidden` to `PagesGrid` overlay so it does not interfere with TalkBack linear navigation when closed | `PagesGrid.tsx` | `phase-3-reader.md:8` — Switch Access ordering |
+| A12 | Add `accessible` + `accessibilityRole="text"` to reading viewport paragraphs in `ScrollMode.tsx` and `PaginateMode.tsx`; announce current page/chapter on page turn via `AccessibilityInfo.announceForAccessibility` | `ScrollMode.tsx`, `PaginateMode.tsx`, `ReaderScreen.tsx` | `phase-3-reader.md:8` — reading content semantics |
+
+#### B — Performance
+
+| # | Task | Files Changed | Spec Reference |
+|---|------|---------------|----------------|
+| B1 | Add `FastImage.preload()` for book covers in `BookCard` on mount; set `cacheControl: 'immutable'` on all `FastImage` `source` props | `BookCard.tsx`, `BookDetailsScreen.tsx`, `ContinueReadingCard.tsx` | `phase-2.md:2` — FastImage cache |
+| B2 | Add `getItemLayout`, `windowSize={5}`, `maxToRenderPerBatch={9}`, `removeClippedSubviews={true}` to `PagesGrid` FlatList | `PagesGrid.tsx` | `phase-3-reader.md:3.3` — pagination laziness for 1000+ pages |
+| B3 | Wrap `paginateChapters()` call in `useMemo` in `PaginateMode.tsx` to avoid re-parsing on every render | `PaginateMode.tsx` | Perf — prevent unnecessary re-computation |
+| B4 | Enable R8 minification: set `enableProguardInReleaseBuilds = true` in `build.gradle`, add ProGuard keep rules for Hermes, SQLite, FastImage, SVG | `android/app/build.gradle`, `android/app/proguard-rules.pro` | M8 verification — release build must be minified |
+| B5 | Wire `build.gradle` release signing config to read from `gradle.properties` (`MYAPP_RELEASE_STORE_FILE`, etc.) so the release workflow secrets are actually consumed | `android/app/build.gradle` | Release signing is currently broken — uses debug key |
+
+#### C — Dark Mode App Chrome + Settings Screen
+
+| # | Task | Files Changed | Spec Reference |
+|---|------|---------------|----------------|
+| C1 | Create `features/settings/screens/SettingsScreen.tsx` — new `native-stack` route `Settings` pushed from Library header gear icon. Sections: Appearance (dark mode toggle), Reading Goal, About (Privacy, Terms, Content Notice) | New: `features/settings/screens/SettingsScreen.tsx`. Modified: `RootNavigator.tsx`, `LibraryScreen.tsx` | `phase-2.md:5` — Settings screen planned; `phase-4.md:306` — M8 dark toggle |
+| C2 | Add `AppThemeToggle` component inside Settings → Appearance section: three-segment control `Light | Neutral Dark | Warm Dark` → calls `setAppTheme()` from `ThemeProvider` context | New: `features/settings/components/AppThemeToggle.tsx` | `phase-3.md:8` — app-chrome vs reading-content scope |
+| C3 | Persist `appTheme` choice to `settings` table (`appTheme` key) in `ThemeProvider.tsx` and restore on app launch | `ThemeProvider.tsx`, `SettingsRepository.ts` | `phase-3.md:8` — theme persists across sessions |
+| C4 | Add `ReadingGoalRow` in Settings: shows current `dailyReadingGoal`, tap to edit (reuses goal picker pattern from `ProgressSheet`) | `SettingsScreen.tsx` | `phase-3.md:3.6` — 38 min/day goal configurable |
+| C5 | Add `AboutSection` in Settings: `Content Notice` (static text per `phase-1.md:5.2`), `Privacy Policy` (link to hosted URL or static text per `phase-1.md:5.3`), `Terms of Service` (link or static text per `phase-1.md:5.4`), `Contact/Support` email | `SettingsScreen.tsx` | `phase-1.md:5.3/5.4` — legal pages |
+| C6 | Create Privacy Policy and Terms of Service static screens (or `Linking.openURL` to hosted pages) accessible from Settings → About | New: `features/settings/screens/PrivacyScreen.tsx`, `TermsScreen.tsx` (or inline) | `phase-1.md:5.3/5.4` — in-app legal |
+
+#### D — App Icon, Splash & Branding
+
+| # | Task | Files Changed | Spec Reference |
+|---|------|---------------|----------------|
+| D1 | Generate custom Reeda Android mipmap icons from existing `assets/logo.svg` / `assets/icon.svg` — replace default RN blue icons across all density buckets | `android/app/src/main/res/mipmap-*/` | Play listing — custom icon required |
+| D2 | Add splash screen: install `react-native-splash-screen` (or `react-native-bootsplash`), create splash drawable from `assets/logo.png`, configure in `AndroidManifest.xml` and `MainActivity.tsx` | New: splash assets in `android/app/src/main/res/drawable*/`, modified: `MainActivity.tsx`, `android/app/src/main/res/values/styles.xml` | Cold start < 2s with branded splash |
+
+#### E — CI, Signing & Release
+
+| # | Task | Files Changed | Spec Reference |
+|---|------|---------------|----------------|
+| E1 | Add `assembleRelease` job to `ci.yml` — runs `./gradlew assembleRelease` on push to `main` to validate release APK compiles | `.github/workflows/ci.yml` | M8 verification — `ci.yml` green on release |
+| E2 | Fix release workflow: inject signing config into `gradle.properties` and update `build.gradle` `release` signing block to read those keys (B5 handles Gradle side) | `.github/workflows/release.yml`, `android/app/build.gradle` | Release APK must be signed with release key |
+| E3 | Tighten ESLint: re-enable `prettier/prettier`, set `no-unused-vars` to `warn`, set `exhaustive-deps` to `warn` | `.eslintrc.js` | Code quality before release |
+| E4 | Add version-bump script: sync `versionCode`/`versionName` in `build.gradle` with `package.json` version | `package.json` (new script), `android/app/build.gradle` | Automated versioning for Play releases |
+
+#### F — PDF Text Extraction & OCR (TTS + Highlights + Search for PDFs)
+
+> **Why:** PDFs currently render as images only — no text layer means TTS disabled, no text selection, no highlights, no search. This section adds a parallel text extraction pipeline that produces `ParsedChapter[]` (same format EPUBs use), so all downstream systems (TTS, highlights, search, pagination) work on PDFs automatically.
+
+**File structure:**
+```
+parsing/pdf/
+  ├── extractText.ts        ← NEW: pdfjs-dist text extraction (embedded text)
+  ├── ocrText.ts            ← NEW: ML Kit OCR fallback (scanned/image-only)
+  ├── extractMetadata.ts    ← MODIFY: real hasTextLayer detection
+  ├── PdfView.tsx           ← MODIFY: pass page images to OCR if needed
+  └── pdfToChapters.ts      ← NEW: convert extracted text → ParsedChapter[]
+```
+
+| # | Task | Files Changed | Spec Reference |
+|---|------|---------------|----------------|
+| F1 | Install `pdfjs-dist` (Mozilla PDF.js — JS text extraction engine, ~473 KB / 133 KB gzipped) and `@react-native-ml-kit/text-recognition` (Google ML Kit OCR — native bridge, ~898 B JS + ~2–3 MB native APK) | `package.json` | `phase-1.md:3.1` — PDF support; `phase-5.md:177` — PDF text selection risk |
+| F2 | Create `parsing/pdf/extractText.ts` — uses `pdfjs-dist` to load PDF document via `getDocument()`, iterate pages, call `page.getTextItems()` → concatenate into plain-text string per page. Returns `{ pageTexts: string[], hasTextLayer: boolean }` where `hasTextLayer = true` if total extracted text > 200 chars (matching existing heuristic at `ReaderScreen.tsx:113`) | New: `app/src/parsing/pdf/extractText.ts` | PDF.js text layer extraction |
+| F3 | Create `parsing/pdf/ocrText.ts` — takes page image URIs (from `react-native-pdf` page render or `FileStorage`), runs `TextRecognition.recognize(imageUri)` from `@react-native-ml-kit/text-recognition` on each page. Returns `{ pageTexts: string[] }`. Includes batch processing with progress callback for large PDFs | New: `app/src/parsing/pdf/ocrText.ts` | ML Kit OCR for scanned PDFs |
+| F4 | Create `parsing/pdf/pdfToChapters.ts` — converts `pageTexts: string[]` + PDF metadata into `ParsedChapter[]` where each chapter = one PDF page. Sets `id = 'page-${n}'`, `title = 'Page ${n}'`, `rawText = pageTexts[n]`, `level = 0`, `href = ''`, `html = ''`. Output matches `ParsedChapter` type from `parsing/epub/parse.ts:3` so downstream systems consume it unchanged | New: `app/src/parsing/pdf/pdfToChapters.ts` | Output format: `ParsedChapter[]` |
+| F5 | Update `parsing/pdf/extractMetadata.ts` — replace stub `hasTextLayer: pageCount > 0` with real detection: call `extractText(pdfUri)` on first page, check if extracted text length > 200 chars. Set `hasTextLayer` accordingly. Store `totalTextLength` for the existing `ReaderScreen` heuristic | Modify: `app/src/parsing/pdf/extractMetadata.ts` | `phase-1.md:3.3` — scanned PDF detection |
+| F6 | Update `ReaderScreen.tsx` PDF path — before rendering `<PdfView>`, call `extractText(pdfUri)` → if `hasTextLayer`, build `parsedChapters` via `pdfToChapters()`. If not, queue `ocrText()` on visible pages (background, with loading state). Feed `parsedChapters` into existing `ScrollMode`/`PaginateMode`/`useTts` pipeline — same code path EPUBs use | Modify: `app/src/features/reader/screens/ReaderScreen.tsx` | PDF text flows into existing pipeline |
+| F7 | Update `PdfView.tsx` — add `onText` callback to `<Pdf>` component if supported by `react-native-pdf@6.7.x` for embedded-text PDFs (alternative to pdfjs-dist). Keep `<Pdf>` as the visual renderer — extracted text is a parallel data layer, not a display replacement. If `onText` unavailable or unreliable, fall back to `pdfjs-dist` (F2) | Modify: `app/src/parsing/pdf/PdfView.tsx` | `react-native-pdf` text extraction |
+| F8 | Add `ParsedChapter[]` state for PDFs in `ReaderScreen.tsx` — new `pdfChapters` state variable, set after extraction completes. Pass to `useTts(pdfChapters)` and to `ScrollMode`/`PaginateMode` as `chapters` prop. For PDFs, `parsedChapters` now contains real page text instead of empty strings — the `hasTextLayerForBook` heuristic (`totalRawLength > 200`) will now correctly evaluate to `true` for embedded-text PDFs | Modify: `app/src/features/reader/screens/ReaderScreen.tsx` | `phase-2.md:7` — parsing output for TTS/search |
+| F9 | Wire `rawTextPerChapter` for PDFs into `SearchSheet` — currently `rawTextPerChapter = parsedChapters.map(c => c.rawText)` (line 111). With real extracted text, PDF search becomes functional. No code change needed if F6/F8 correctly populate `parsedChapters` — the existing `rawTextPerChapter` derivation handles it | Verify only (no change if F6/F8 correct) | Search works on PDFs automatically |
+| F10 | Update `TtsQueue.buildQueue()` to handle PDF chapter structure — PDF "chapters" are pages, so sentence splitting per page is correct but page boundaries may split mid-sentence. Add optional `mergeAcrossPages` flag: when true, concatenate adjacent page texts before sentence splitting to avoid mid-sentence breaks. Default off for EPUBs, on for PDFs | Modify: `app/src/tts/TtsQueue.ts` | TTS sentence continuity across PDF pages |
+| F11 | Add OCR progress UI — when `hasTextLayer === false` and OCR is running, show a progress indicator in `ReaderScreen` (e.g., "Recognizing text... Page 3/12"). Use `ActivityIndicator` + progress text. Dismiss when OCR completes. Store OCR results in `FileStorage` cache (`{bookId}_ocr.json`) so OCR runs only once per PDF | New/modify: `app/src/features/reader/screens/ReaderScreen.tsx`, `app/src/data/files/FileStorage.ts` | UX — OCR feedback |
+| F12 | Add ProGuard keep rules for `pdfjs-dist` WASM and ML Kit in `proguard-rules.pro` — ensure WASM binary and ML Kit native classes are not stripped by R8 | Modify: `android/app/proguard-rules.pro` | B4 (R8 enablement) must not break PDF/OCR |
+
+**Depends On:** M1–M7 (all features live). M8 (this extension completes what M8 intended). F1–F5 (extraction pipeline) must complete before F6–F10 (wiring). F12 depends on B4 (R8).
+
+**Plugs Into:**
+
+- **A1–A12 (A11y):** Every labelled component is already mounted via `RootNavigator` → `ReaderScreen` → panels. Adding `accessibilityLabel`/`accessibilityRole` does not change rendering — it only adds metadata that TalkBack reads. Reduced-motion (A9) plugs into `AccessibilityInfo` which is a React Native built-in — no new dependency. TTS+TalkBack (A10) plugs into existing `TtsEngine` lifecycle.
+- **B1–B5 (Perf):** FastImage cache (B1) affects only `BookCard`/`BookDetails`/`ContinueReadingCard` — all already rendered in Library. PagesGrid tuning (B2) is a prop change on an existing FlatList. R8 (B4) and signing (B5) are build-time only — no runtime behavior change.
+- **C1–C6 (Settings + Dark Mode):** `SettingsScreen` is pushed from `LibraryScreen` gear icon → route added to `RootNavigator` in same commit (per Section 1 rule 3 — no orphan screens). `AppThemeToggle` calls `setAppTheme()` which already exists in `ThemeProvider` context — the toggle is the first consumer, closing the loop. `appTheme` persistence writes to `settings` table (already open since M1). About/Privacy/Terms are static screens or links — no new repositories.
+- **D1–D2 (Branding):** Icon replacement is asset-only — no code change. Splash screen hooks into `MainActivity.tsx` which already exists — the splash is shown before React loads and dismissed by `SplashScreen.hide()` after `App.tsx` mounts.
+- **E1–E4 (CI/Release):** `assembleRelease` in CI validates the same build artifact that ships. ESLint tightening catches issues before merge. Version-bump script is a dev tool — no runtime effect.
+- **F1–F5 (Extraction pipeline):** Produces `ParsedChapter[]` — the exact type consumed by `ScrollMode`, `PaginateMode`, `TtsQueue.buildQueue()`, `SearchSheet`, and highlight matching (`rawText.indexOf()`). No downstream system needs modification if the output format matches.
+- **F6–F8 (ReaderScreen wiring):** The PDF code path in `ReaderScreen.tsx` already has `parsedChapters` state — it's currently populated from EPUB parsing or empty for PDFs. The change: populate it from `extractText()` → `pdfToChapters()`. The `useTts`, `ScrollMode`, `PaginateMode`, and `SearchSheet` calls already consume `parsedChapters` — they receive real text for PDFs without knowing the source.
+- **F9 (Search):** `rawTextPerChapter` is derived as `parsedChapters.map(c => c.rawText)` at `ReaderScreen.tsx:111`. If `parsedChapters` contains real PDF page text, search works automatically — no additional wiring.
+- **F10 (TTS sentence merging):** `TtsQueue.buildQueue()` at `TtsQueue.ts:24` already iterates `chapters` and splits each `ch.rawText` into sentences. The merge flag concatenates adjacent page texts before splitting — a local change inside `buildQueue()`, transparent to callers.
+- **F11 (OCR progress):** Plugs into existing loading state in `ReaderScreen` — no new screen, no new route. Cache in `FileStorage` means OCR runs once and subsequent opens skip extraction.
+- **F12 (ProGuard):** Ensures B4 (R8 enablement) doesn't break WASM loading or ML Kit native calls. Must be applied in the same milestone as B4.
+
+**Dead Code:** None. Every new file is imported by `ReaderScreen.tsx` (reachable via `RootNavigator`). `extractText.ts` and `ocrText.ts` are consumed by `ReaderScreen` — not left as unused utilities. The OCR cache in `FileStorage` is read on subsequent opens — not a dead write.
+
+**Verification (run after M8-Extension):**
+
+- **A11y:** Enable TalkBack → navigate Library → Details → Reader → menu → toolbar → panels → every element announces its label and role. Long-press text → selection toolbar buttons all announce. Note sheet announces "Add Note" with anchor text. Toggle system Reduce Motion → page transitions become instant, menu snaps instead of sliding.
+- **Perf:** Release APK size is smaller than debug APK (R8 working). PagesGrid with 1000+ pages scrolls at 60 FPS. `FastImage` covers load from cache on second visit.
+- **Dark Mode:** Settings → toggle Warm Dark → app chrome (Library background, cards, toolbar, menu) switches to `#1E1814` palette. Close app → reopen → warm dark persists. Reading theme stays per-book (sepia unaffected).
+- **Settings:** Settings screen opens from Library gear icon. Reading goal editable. Privacy Policy / Terms links resolve (or static text displays correctly). Content Notice shows `phase-1.md:5.2` text.
+- **Branding:** App icon is custom Reeda logo (not default RN blue). Splash shows logo on cold start and dismisses within 2s.
+- **Release:** `ci.yml` shows green `assembleRelease` job. `release.yml` produces APK signed with release key (verify with `apksigner verify`). ESLint runs clean with tightened rules.
+- **PDF embedded text:** Open a digital EPUB→PDF (e.g., from Calibre) → TTS starts reading from current page → sentence sync works → highlights appear on long-press → search finds text across pages. `hasTextLayer` evaluates to `true`.
+- **PDF scanned:** Open a scanned document → OCR progress indicator appears → after recognition, TTS reads recognized text → highlights work → search works. `hasTextLayer` evaluates to `false` initially, then extraction populates `parsedChapters`.
+- **PDF cache:** Close and reopen same scanned PDF → OCR does not re-run (reads from cache). Verify `FileStorage` has `{bookId}_ocr.json`.
+- **PDF sentence continuity:** TTS across page boundary → no mid-sentence breaks (F10 merge flag working).
+- **PDF + R8:** Release APK with R8 enabled → PDF with embedded text still extracts text (WASM not stripped). ML Kit OCR still functions (native classes not stripped).
+- **No regression:** EPUB reading, TTS, highlights, search still work identically — the PDF changes are additive, not modifying existing EPUB code paths.
+
+---
+
 ## 4. User Journeys That Must Stay Green After Every Milestone
 
 If any journey below is broken after a milestone, that milestone is not done — regardless of whether its individual screens look correct. These are the integration tests (manual in M1–M4, automated with Maestro/Detox from M5 onward).
@@ -340,6 +467,8 @@ If any journey below is broken after a milestone, that milestone is not done —
 | J10 | Library → create shelf → assign book → filter by shelf → delete book → cascade deletes highlights/notes/bookmarks + removes files | M5 | Shelves + cascade FK per `phase-2.md:5.1` |
 | J11 | Reader → Read Aloud → mini-player → scrub/skip/speed → sleep timer fires → highlight sync follows word | M6 | TTS engine → queue → mini-player → highlight sync |
 | J12 | Library StatsWidget + Reader ProgressSheet show real goal/streak/history | M7 | reading_sessions → StatsWidget + ProgressSheet |
+| J14 | Settings → toggle dark mode → app chrome switches → reopen → persists; Settings → About → Privacy/Terms resolve; TalkBack covers all panels; release APK signed + R8 minified | M8-Ext | ThemeProvider setAppTheme → settings persistence; a11y labels; CI release gate |
+| J15 | Open PDF with embedded text → TTS reads pages → highlights work → search finds text; Open scanned PDF → OCR progress → TTS reads recognized text → highlights work; Reopen same PDF → OCR cached, instant load | M8-Ext (F) | extractText/pdfToChapters → ParsedChapter[] → TTS/highlights/search pipeline |
 
 ---
 
@@ -353,7 +482,7 @@ Every script must have at least one **provider** (what it consumes) and one **co
 | `DatabaseProvider` + `001_initial` (M1) | SQLite handle + 11 tables | — | Every `*Repository` | `sqlite_master` check (M1) |
 | `shared/ui/*` — Card, Button, Sheet, Slider, Toggle, SegmentedControl, Pill (M1) | Reusable chrome used everywhere | `tokens.ts` + `icons` | Every feature screen/panel | No screen builds its own button — grep proves import from `shared/ui` |
 | `shared/icons` (M1) | Lucide re-exports | `lucide-react-native` | Every feature | Swap test: change one icon in `shared/icons` → all usages update |
-| `RootNavigator` + providers wrapper (M1) | Reachability for every screen | `ThemeProvider` + `DatabaseProvider` | `Library`, `BookDetails`, `Reader` (+ all future routes) | J1–J12 all start with navigation |
+| `RootNavigator` + providers wrapper (M1) | Reachability for every screen | `ThemeProvider` + `DatabaseProvider` | `Library`, `BookDetails`, `Reader` (+ all future routes) | J1–J14 all start with navigation |
 | `BookRepository` + `ProgressRepository` base (M1→M2) | `list/search/sort/filter/upsert/delete` + progress % | `DatabaseProvider` + `reading_progress` | `LibraryScreen` (grid), `ContinueReadingCard`, `StatsWidget`, `BookDetails` | M2: Library shows cards from DB, not mocks |
 | `FileStorage` base (M1→M2→M5) | `getAppPrivateDir` → `copyToAppPrivate` → `computeHash` → `checkDuplicate` → `extractCover` | `books` table (hash), file system | `ImportFlow`, `BookCard` (cover), `BookRepository` (filePath) | M2: cover appears; M5: dedup prompt |
 | `parsing/*` minimal (M2) → full (M3) | `extractMetadata` → `parseChapters` + `paginate` + `rawTextPerChapter` | `books.filePath` | `Library` (cover/title), `Reader` modes, `TOCPanel`, TTS queue, search | M3: Reader shows chapters from parse, not hardcoded |
@@ -375,6 +504,18 @@ Every script must have at least one **provider** (what it consumes) and one **co
 | `ReadingSessionsRepository` + goal/streak queries (M7) | `todayMinutes` + streak + history | `reading_sessions` + `reading_progress` + `settings.dailyReadingGoal` | `StatsWidget` + `ProgressSheet` | J12 |
 | `StatsWidget` full (M7) | Real counts + goal bar | `ReadingSessionsRepository` + `BookmarkRepository`/`HighlightRepository`/`NoteRepository` | `LibraryScreen` | J12 |
 | `ProgressSheet` full (M7) | Ring + 4-cell grid + goal card + history graph | `reading_progress` + `reading_sessions` + `settings` | `Reader` (menu Item 9) | J12 |
+| `SettingsScreen` + `AppThemeToggle` + `AboutSection` (M8-Ext) | App settings: dark mode toggle, reading goal, privacy/terms/about | `ThemeProvider.setAppTheme` + `SettingsRepository` + `tokens.ts` palettes | `LibraryScreen` (gear icon), `RootNavigator` route | J14 |
+| `PrivacyScreen` / `TermsScreen` (M8-Ext) | Legal content display | `phase-1.md:5.3/5.4` text | `SettingsScreen` → About section | J14 |
+| `useTalkBackDetection` hook (M8-Ext) | TalkBack active state for TTS ducking | `AccessibilityInfo` (RN built-in) | `TTSMiniPlayer`, `TtsEngine` | J14: TTS+TalkBack don't conflict |
+| All `shared/ui/*` a11y labels (M8-Ext) | `accessibilityLabel` + `accessibilityRole` on Button, Card, Pill, Toggle, Slider, SegmentedControl | `tokens.ts` (unchanged) | Every consumer — Library, Reader, Settings, Import | J14: TalkBack covers all UI |
+| All reader panels a11y labels (M8-Ext) | `accessibilityLabel` + `accessibilityRole="header"` on 12 panel headers | Existing panel components | `RectangularMenu` → panels | J14: TalkBack announces panel titles |
+| `build.gradle` release signing + R8 (M8-Ext) | Release APK signed with release key + minified | `gradle.properties` secrets | `release.yml`, `ci.yml` assembleRelease | J14: release APK verified |
+| Custom mipmap icons + splash (M8-Ext) | Branded app icon and launch screen | `assets/logo.svg` / `assets/logo.png` | Android launcher, `MainActivity.tsx` | J14: custom icon + branded splash |
+| `extractText.ts` — pdfjs-dist text extraction (M8-Ext F) | Page-level text from embedded-text PDFs → `{ pageTexts: string[], hasTextLayer: boolean }` | `pdfjs-dist` (PDF.js) | `ReaderScreen` (PDF path), `extractMetadata.ts` (detection) | J15: PDF TTS + highlights |
+| `ocrText.ts` — ML Kit OCR (M8-Ext F) | Page-level text from scanned/image-only PDFs → `{ pageTexts: string[] }` | `@react-native-ml-kit/text-recognition` | `ReaderScreen` (PDF fallback), `FileStorage` (OCR cache) | J15: scanned PDF TTS |
+| `pdfToChapters.ts` — PDF → ParsedChapter[] (M8-Ext F) | Converts page texts into `ParsedChapter[]` format matching EPUB output | `extractText.ts` or `ocrText.ts` | `ReaderScreen` → `ScrollMode`/`PaginateMode`/`useTts`/`SearchSheet` | J15: unified PDF + EPUB pipeline |
+| `FileStorage` OCR cache (M8-Ext F) | `{bookId}_ocr.json` — cached OCR results per PDF | OCR output from `ocrText.ts` | `ReaderScreen` (skip re-OCR on reopen) | J15: instant reopen |
+| `TtsQueue` mergeAcrossPages (M8-Ext F) | Concatenates adjacent PDF page texts before sentence splitting to avoid mid-sentence breaks | `ParsedChapter[]` with PDF chapter IDs | `useTts` → TTS engine | J15: sentence continuity |
 
 > To check for dead code at any milestone: `grep -r "from '@/.*"` each script → every import must be imported somewhere that is itself reachable from `RootNavigator` or `App.tsx`. CI runs a dead-import check from M2 onward (simple script: list files not imported by any other file → fail if not in Section 6 allowlist).
 
@@ -420,6 +561,7 @@ Every script must have at least one **provider** (what it consumes) and one **co
 | 2026-09-11 | Reader panels are local state, not routes (per `phase-2.md:4`) — therefore every panel is wired the same milestone its trigger is wired | Keeps position/selection alive and makes the wiring visible in one file (`ReaderScreen`) |
 | 2026-09-11 | Import lands in M5, not M1/M2, but seeded samples land in M2 via the *same* `BookRepository.upsert()` path | Library is testable from M2 without waiting for the full SAF + Share-sheet pipeline, yet no second DB path is created |
 | 2026-09-11 | No dead code without a row in Section 6 + an expiry milestone + disabled UI hint | Forces sequencing honesty and prevents "TODO" files that linger without a consumer |
+| 2026-09-12 | M8-Extension milestone added to close a11y, perf, dark chrome, settings, branding, and release gaps found during pre-release audit | M8 covered the intent; M8-Ext provides the granular task breakdown so nothing is missed before Play review |
 
 ---
 
@@ -432,7 +574,7 @@ Every script must have at least one **provider** (what it consumes) and one **co
 | `docs/phase-2.md` | Technical Architecture | Complete |
 | `docs/phase-3.md` | Design Spec — Home/Library | Complete |
 | `docs/phase-3-reader.md` | Design Spec — Reader + Menu | Complete |
-| `docs/phase-4.md` | Development Roadmap & Integration Wiring | **Complete (this doc)** |
+| `docs/phase-4.md` | Development Roadmap & Integration Wiring | **Complete (this doc — updated with M8-Ext)** |
 | `docs/phase-5.md` | Testing, Performance, Deployment & Risks | Complete |
 
 ---

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { AppState, ToastAndroid, Platform } from 'react-native';
+import { AppState, ToastAndroid, Platform, AccessibilityInfo } from 'react-native';
 import { useTtsStore, TTS_RATES } from './ttsStore';
 import { TtsEngine } from './TtsEngine';
 import { buildQueue, findStartIndex } from './TtsQueue';
@@ -155,6 +155,30 @@ export function useTts(chapters: ParsedChapter[], currentChapterIndex = 0, bookT
       subCancel.remove();
     };
   }, [isActive]);
+
+  // TalkBack handling: pause TTS when screen reader is active, resume when it deactivates
+  useEffect(() => {
+    let wasPlayingBeforeTalkBack = false;
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', enabled => {
+      const s = useTtsStore.getState();
+      if (!s.isActive) return;
+      if (enabled) {
+        // TalkBack turned on — pause TTS to avoid conflict
+        wasPlayingBeforeTalkBack = s.isPlaying;
+        if (s.isPlaying) {
+          void TtsEngine.pause();
+          s.setPlaying(false);
+        }
+      } else {
+        // TalkBack turned off — resume if it was playing before
+        if (wasPlayingBeforeTalkBack) {
+          s.setPlaying(true);
+          wasPlayingBeforeTalkBack = false;
+        }
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // Background handling: pause when backgrounded if backgroundPlayback off per spec
   useEffect(() => {

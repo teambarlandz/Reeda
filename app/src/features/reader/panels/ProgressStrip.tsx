@@ -34,7 +34,7 @@ export function ProgressStrip({ progress, totalPages, currentPage, chapters, onS
 
   return (
     <View style={styles.container} testID="progress-strip">
-      <Pressable onLongPress={() => setExpanded(!expanded)} onPress={onDetailPress} style={{ flex: 1 }}>
+      <Pressable onLongPress={() => setExpanded(!expanded)} onPress={onDetailPress} style={{ flex: 1 }} accessibilityLabel={`Reading progress: page ${currentPage} of ${totalPages}`} accessibilityRole="adjustable">
         <View
           onLayout={e => (width.value = e.nativeEvent.layout.width)}
           style={[styles.track, { backgroundColor: t.accentTrack }]}

@@ -17,10 +17,10 @@ export function PagesGrid({ visible, totalPages, currentPage, onClose, onSelect 
   if (!visible) return null;
   const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
   return (
-    <View style={[styles.overlay, { backgroundColor: t.bgPrimary }]}>
+    <View style={[styles.overlay, { backgroundColor: t.bgPrimary }]} accessibilityElementsHidden={!visible} importantForAccessibility={visible ? 'auto' : 'no-hide-descendants'}>
       <View style={styles.header}>
-        <Text style={[typography.heading, { color: t.textPrimary }]}>Pages</Text>
-        <Pressable onPress={onClose} testID="pages-close">
+        <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Pages</Text>
+        <Pressable onPress={onClose} testID="pages-close" accessibilityLabel="Close pages" accessibilityRole="button">
           <X size={24} color={t.iconTint} />
         </Pressable>
       </View>

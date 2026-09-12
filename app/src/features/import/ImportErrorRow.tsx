@@ -16,43 +16,43 @@ type Props = {
 export function ImportErrorRow({ fileName, error, onRetry, onOpenExisting, onImportAnyway, onCancel }: Props) {
   const t = useAppTheme();
   return (
-    <View style={[styles.card, { backgroundColor: t.bgCard }]} testID={`import-error-${fileName}`}>
+    <View style={[styles.card, { backgroundColor: t.bgCard }]} testID={`import-error-${fileName}`} accessibilityLabel={`Import error: ${error.title} for ${fileName}`} accessibilityRole="alert">
       <Text style={[typography.title, { color: t.textPrimary }]}>{error.title}</Text>
       <Text style={[typography.body, { color: t.textSecondary, marginTop: 4 }]}>{error.body}</Text>
       <Text style={[typography.caption, { color: t.textSecondary, marginTop: 4 }]}>{fileName}</Text>
       <View style={styles.actions}>
         {error.case === 'duplicate' && (
           <>
-            <Pressable onPress={onOpenExisting} style={[styles.btn, { backgroundColor: t.bgCardDark }]} testID="open-existing">
+            <Pressable onPress={onOpenExisting} style={[styles.btn, { backgroundColor: t.bgCardDark }]} testID="open-existing" accessibilityLabel="Open existing book" accessibilityRole="button">
               <Text style={[typography.button, { color: t.textInverse }]}>Open Existing</Text>
             </Pressable>
-            <Pressable onPress={onImportAnyway} style={[styles.btn, { backgroundColor: t.bgSearch }]} testID="import-anyway">
+            <Pressable onPress={onImportAnyway} style={[styles.btn, { backgroundColor: t.bgSearch }]} testID="import-anyway" accessibilityLabel="Import duplicate anyway" accessibilityRole="button">
               <Text style={[typography.button, { color: t.textPrimary }]}>Import Anyway</Text>
             </Pressable>
           </>
         )}
         {error.case === 'corrupt' && (
           <>
-            <Pressable onPress={onRetry} style={[styles.btn, { backgroundColor: t.bgCardDark }]} testID="retry">
+            <Pressable onPress={onRetry} style={[styles.btn, { backgroundColor: t.bgCardDark }]} testID="retry" accessibilityLabel="Retry import" accessibilityRole="button">
               <Text style={[typography.button, { color: t.textInverse }]}>Retry</Text>
             </Pressable>
-            <Pressable onPress={onCancel} style={[styles.btn, { backgroundColor: t.bgSearch }]} testID="cancel">
+            <Pressable onPress={onCancel} style={[styles.btn, { backgroundColor: t.bgSearch }]} testID="cancel" accessibilityLabel="Cancel import" accessibilityRole="button">
               <Text style={[typography.button, { color: t.textPrimary }]}>Cancel</Text>
             </Pressable>
           </>
         )}
         {error.case === 'tooLarge' && (
           <>
-            <Pressable onPress={onImportAnyway} style={[styles.btn, { backgroundColor: t.bgCardDark }]} testID="open-anyway">
+            <Pressable onPress={onImportAnyway} style={[styles.btn, { backgroundColor: t.bgCardDark }]} testID="open-anyway" accessibilityLabel="Import large file anyway" accessibilityRole="button">
               <Text style={[typography.button, { color: t.textInverse }]}>Open Anyway</Text>
             </Pressable>
-            <Pressable onPress={onCancel} style={[styles.btn, { backgroundColor: t.bgSearch }]} testID="cancel">
+            <Pressable onPress={onCancel} style={[styles.btn, { backgroundColor: t.bgSearch }]} testID="cancel" accessibilityLabel="Cancel import" accessibilityRole="button">
               <Text style={[typography.button, { color: t.textPrimary }]}>Cancel</Text>
             </Pressable>
           </>
         )}
         {error.case === 'unsupported' && (
-          <Pressable onPress={onCancel} style={[styles.btn, { backgroundColor: t.bgSearch }]} testID="ok">
+          <Pressable onPress={onCancel} style={[styles.btn, { backgroundColor: t.bgSearch }]} testID="ok" accessibilityLabel="OK" accessibilityRole="button">
             <Text style={[typography.button, { color: t.textPrimary }]}>OK</Text>
           </Pressable>
         )}

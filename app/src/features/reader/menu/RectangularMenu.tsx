@@ -27,6 +27,7 @@ type Props = {
   onSelect: (item: string) => void;
   ttsActive?: boolean;
   ttsDisabled?: boolean;
+  reducedMotion?: boolean;
 };
 
 const ITEMS: Array<{ key: string; label: string; icon: any; disabledIcon?: any }> = [
@@ -44,13 +45,13 @@ const ITEMS: Array<{ key: string; label: string; icon: any; disabledIcon?: any }
   { key: 'settings', label: 'Settings', icon: Settings },
 ];
 
-export function RectangularMenu({ onSelect, ttsActive = false, ttsDisabled = false }: Props) {
+export function RectangularMenu({ onSelect, ttsActive = false, ttsDisabled = false, reducedMotion = false }: Props) {
   const { isCollapsed, toggle, activePanel } = useMenuStore();
   const t = useAppTheme();
   const width = isCollapsed ? 56 : 220;
 
   const animatedStyle = useAnimatedStyle(() => ({
-    width: withTiming(width, { duration: 250 }),
+    width: withTiming(width, { duration: reducedMotion ? 0 : 250 }),
   }));
 
   return (

@@ -28,7 +28,7 @@ export function BookmarksPanel({ visible, bookId, onClose, onSelect }: Props) {
       <Pressable style={{ flex: 1 }} onPress={onClose} />
       <View style={[styles.panel, { backgroundColor: t.bgCard, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }]}>
         <View style={styles.header}>
-          <Text style={[typography.heading, { color: t.textPrimary }]}>Bookmarks</Text>
+          <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Bookmarks</Text>
           <Pressable onPress={onClose} testID="bookmarks-close">
             <X size={24} color={t.iconTint} />
           </Pressable>

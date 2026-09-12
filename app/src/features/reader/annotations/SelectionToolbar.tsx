@@ -22,20 +22,20 @@ export function SelectionToolbar({ visible, onCopy, onHighlight, onNote, onDefin
   if (isNarrow && !showOverflow) {
     return (
       <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(120)} style={[styles.container, elevation.lg]} testID="selection-toolbar">
-        <Pressable onPress={onCopy} style={styles.btn} testID="sel-copy">
+        <Pressable onPress={onCopy} style={styles.btn} testID="sel-copy" accessibilityLabel="Copy" accessibilityRole="button">
           <Copy size={20} color="#FFFFFF" />
           <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Copy</Text>
         </Pressable>
-        <Pressable onPress={onHighlight} style={styles.btn} testID="sel-highlight">
+        <Pressable onPress={onHighlight} style={styles.btn} testID="sel-highlight" accessibilityLabel="Highlight" accessibilityRole="button">
           <Highlighter size={20} color="#FFFFFF" />
         </Pressable>
-        <Pressable onPress={onNote} style={styles.btn} testID="sel-note">
+        <Pressable onPress={onNote} style={styles.btn} testID="sel-note" accessibilityLabel="Add note" accessibilityRole="button">
           <Pencil size={20} color="#FFFFFF" />
         </Pressable>
-        <Pressable onPress={onDefine} style={styles.btn} testID="sel-define">
+        <Pressable onPress={onDefine} style={styles.btn} testID="sel-define" accessibilityLabel="Define" accessibilityRole="button">
           <Languages size={20} color="#FFFFFF" />
         </Pressable>
-        <Pressable onPress={() => setShowOverflow(true)} style={styles.btn} testID="sel-more">
+        <Pressable onPress={() => setShowOverflow(true)} style={styles.btn} testID="sel-more" accessibilityLabel="More options" accessibilityRole="button">
           <MoreHorizontal size={20} color="#FFFFFF" />
         </Pressable>
       </Animated.View>
@@ -43,26 +43,26 @@ export function SelectionToolbar({ visible, onCopy, onHighlight, onNote, onDefin
   }
   return (
     <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(120)} style={[styles.container, elevation.lg]} testID="selection-toolbar">
-      <Pressable onPress={onCopy} style={styles.btn} testID="sel-copy">
-        <Copy size={20} color="#FFFFFF" />
-        <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Copy</Text>
-      </Pressable>
-      <Pressable onPress={onHighlight} style={styles.btn} testID="sel-highlight">
-        <Highlighter size={20} color="#FFFFFF" />
-      </Pressable>
-      <Pressable onPress={onNote} style={styles.btn} testID="sel-note">
-        <Pencil size={20} color="#FFFFFF" />
-        <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Note</Text>
-      </Pressable>
-      <Pressable onPress={onDefine} style={styles.btn} testID="sel-define">
-        <Languages size={20} color="#FFFFFF" />
-        <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Define</Text>
-      </Pressable>
-      <Pressable onPress={onShare} style={styles.btn} testID="sel-share">
-        <Share2 size={20} color="#FFFFFF" />
-      </Pressable>
+      <Pressable onPress={onCopy} style={styles.btn} testID="sel-copy" accessibilityLabel="Copy" accessibilityRole="button">
+          <Copy size={20} color="#FFFFFF" />
+          <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Copy</Text>
+        </Pressable>
+        <Pressable onPress={onHighlight} style={styles.btn} testID="sel-highlight" accessibilityLabel="Highlight" accessibilityRole="button">
+          <Highlighter size={20} color="#FFFFFF" />
+        </Pressable>
+        <Pressable onPress={onNote} style={styles.btn} testID="sel-note" accessibilityLabel="Add note" accessibilityRole="button">
+          <Pencil size={20} color="#FFFFFF" />
+          <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Note</Text>
+        </Pressable>
+        <Pressable onPress={onDefine} style={styles.btn} testID="sel-define" accessibilityLabel="Define" accessibilityRole="button">
+          <Languages size={20} color="#FFFFFF" />
+          <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Define</Text>
+        </Pressable>
+        <Pressable onPress={onShare} style={styles.btn} testID="sel-share" accessibilityLabel="Share" accessibilityRole="button">
+          <Share2 size={20} color="#FFFFFF" />
+        </Pressable>
       {isNarrow && showOverflow && (
-        <Pressable onPress={() => setShowOverflow(false)} style={styles.btn} testID="sel-less">
+        <Pressable onPress={() => setShowOverflow(false)} style={styles.btn} testID="sel-less" accessibilityLabel="Show fewer options" accessibilityRole="button">
           <MoreHorizontal size={20} color="#FFFFFF" />
         </Pressable>
       )}

@@ -13,9 +13,9 @@ type Props = {
 
 export function FacetChips({ selected, onSelect }: Props) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} accessibilityRole="tablist">
       {FACETS.map(f => (
-        <View key={f} style={{ marginRight: spacing.sm }}>
+        <View key={f} style={{ marginRight: spacing.sm }} accessibilityRole="tab" accessibilityState={{ selected: selected === f }}>
           <Pill label={f} selected={selected === f} onPress={() => onSelect(f)} />
         </View>
       ))}

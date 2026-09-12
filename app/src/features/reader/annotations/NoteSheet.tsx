@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Trash2 } from '../../../shared/icons';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { typography, spacing, radius } from '../../../shared/theme/tokens';
@@ -34,14 +34,15 @@ export function NoteSheet({ visible, anchorText, initialText = '', highlightColo
 
   return (
     <Sheet visible={visible} onClose={onClose} height="40%">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <View style={styles.header}>
-        <Text style={[typography.heading, { color: t.textPrimary }]}>{isEditing ? 'Edit Note' : 'Add Note'}</Text>
-        <Pressable onPress={onClose} testID="note-close">
+        <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">{isEditing ? 'Edit Note' : 'Add Note'}</Text>
+        <Pressable onPress={onClose} testID="note-close" accessibilityLabel="Close note" accessibilityRole="button">
           <X size={24} color={t.iconTint} />
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }} keyboardShouldPersistTaps="handled">
         {anchorText && (
           <View style={[styles.anchor, { backgroundColor: t.bgPrimary }]}>
             <Text style={[typography.body, { color: t.textSecondary, fontStyle: 'italic' }]} numberOfLines={2}>
@@ -56,6 +57,9 @@ export function NoteSheet({ visible, anchorText, initialText = '', highlightColo
               <Pressable
                 key={c}
                 onPress={() => onColorChange(c)}
+                accessibilityLabel={`Color ${c}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: c === highlightColor }}
                 style={[styles.dot, { backgroundColor: c, borderWidth: c === highlightColor ? 2 : 0, borderColor: t.textPrimary }]}
               />
             ))}
@@ -71,23 +75,28 @@ export function NoteSheet({ visible, anchorText, initialText = '', highlightColo
           multiline
           autoFocus
           testID="note-input"
+          returnKeyType="next"
+          blurOnSubmit={false}
+          onSubmitEditing={handleSave}
+          accessibilityLabel="Note text"
         />
 
         <View style={styles.actions}>
-          <Pressable onPress={onClose} testID="note-cancel">
+          <Pressable onPress={onClose} testID="note-cancel" accessibilityLabel="Cancel" accessibilityRole="button">
             <Text style={[typography.title, { color: t.textSecondary }]}>Cancel</Text>
           </Pressable>
-          <Pressable onPress={handleSave} style={[styles.saveBtn, { backgroundColor: t.buttonPrimaryBg }]} testID="note-save">
+          <Pressable onPress={handleSave} style={[styles.saveBtn, { backgroundColor: t.buttonPrimaryBg }]} testID="note-save" accessibilityLabel="Save note" accessibilityRole="button">
             <Text style={[typography.button, { color: t.buttonPrimaryText }]}>Save</Text>
           </Pressable>
         </View>
 
         {isEditing && onDelete && (
-          <Pressable onPress={onDelete} style={{ alignSelf: 'flex-end', marginTop: spacing.md }} testID="note-delete">
+          <Pressable onPress={onDelete} style={{ alignSelf: 'flex-end', marginTop: spacing.md }} testID="note-delete" accessibilityLabel="Delete note" accessibilityRole="button">
             <Trash2 size={20} color={t.iconTint} />
           </Pressable>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </Sheet>
   );
 }

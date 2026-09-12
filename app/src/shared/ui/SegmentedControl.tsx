@@ -12,7 +12,7 @@ export function SegmentedControl({ options, selected, onSelect }: Props) {
       {options.map(o => {
         const active = o === selected;
         return (
-          <Pressable key={o} onPress={() => onSelect(o)} style={{ flex: 1, backgroundColor: active ? t.bgCardDark : 'transparent', borderRadius: radius.full, paddingVertical: spacing.sm, alignItems: 'center' }}>
+          <Pressable key={o} onPress={() => onSelect(o)} style={{ flex: 1, backgroundColor: active ? t.bgCardDark : 'transparent', borderRadius: radius.full, paddingVertical: spacing.sm, alignItems: 'center' }} accessibilityLabel={o} accessibilityRole="button" accessibilityState={{ selected: active }}>
             <Text style={{ ...typography.caption, color: active ? t.textInverse : t.textSecondary }}>{o}</Text>
           </Pressable>
         );

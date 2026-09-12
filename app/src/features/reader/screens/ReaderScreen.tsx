@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions, ToastAndroid, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions, ToastAndroid, Platform, AccessibilityInfo } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../shared/theme/useTheme';
+import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
 import { typography, spacing } from '../../../shared/theme/tokens';
 import { useReaderStore } from '../store/readerStore';
 import { useMenuStore } from '../menu/menuStore';
@@ -29,6 +30,7 @@ import { PdfView } from '../../../parsing/pdf/PdfView';
 import { TOCPanel } from '../panels/TOCPanel';
 import { PagesGrid } from '../panels/PagesGrid';
 import { ProgressStrip } from '../panels/ProgressStrip';
+import { ProgressSheet } from '../panels/ProgressSheet';
 import { ThemePanel } from '../panels/ThemePanel';
 import { HighlightsPanel } from '../panels/HighlightsPanel';
 import { NotesPanel } from '../panels/NotesPanel';
@@ -78,11 +80,13 @@ export function ReaderScreen() {
   const { savePosition } = useReaderPosition(bookId);
   const { data: progress } = useProgress(bookId);
   const queryClient = useQueryClient();
+  const reducedMotion = useReducedMotion();
 
   const [toolbarVisible, setToolbarVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const scrollRef = useRef<ScrollView>(null);
   const sessionRef = useRef<string | null>(null);
+  const prevPageRef = useRef(currentPage);
 
   // Selection / annotation state per phase-3-reader.md:3.4
   const [selectedText, setSelectedText] = useState<string | null>(null);
@@ -114,6 +118,16 @@ export function ReaderScreen() {
   const { isActive: isTtsActive, isPlaying: isTtsPlaying, isExpanded: isTtsExpanded, highlightSync: ttsHighlightSync, queue: ttsQueue, currentIndex: ttsIndex, currentWordIndex, engineAvailable, hasTextLayer } = ttsStore;
   const ttsCurrentSentence = isTtsActive && ttsHighlightSync ? ttsQueue[ttsIndex]?.text ?? null : null;
   const { toggleActive: toggleTtsActive, togglePlay: toggleTtsPlay, skip: ttsSkip, seekToProgress: ttsSeek, cycleRate: ttsCycleRate, setRate: ttsSetRate, setVoice: ttsSetVoice, dismiss: ttsDismiss } = useTts(parsedChapters, currentTtsChapterIndex, book?.title);
+
+  // Announce page/chapter changes to TalkBack
+  useEffect(() => {
+    if (currentPage !== prevPageRef.current) {
+      prevPageRef.current = currentPage;
+      const chapterTitle = parsedChapters[currentPage - 1]?.title ?? '';
+      const announcement = chapterTitle ? `Page ${currentPage}, ${chapterTitle}` : `Page ${currentPage}`;
+      AccessibilityInfo.announceForAccessibility(announcement);
+    }
+  }, [currentPage, parsedChapters]);
 
   // Sync hasTextLayer flag into store for UI disable — skip in test to avoid act warnings
   useEffect(() => {
@@ -413,7 +427,7 @@ export function ReaderScreen() {
   return (
     <FullscreenController>
       <View style={[styles.root, { backgroundColor: t.bgPrimary }]} testID="reader-screen">
-        {!isFullscreen && width >= 360 && <RectangularMenu onSelect={handleMenuSelect} ttsActive={isTtsActive} ttsDisabled={book?.format === 'pdf' && !hasTextLayerForBook} />}
+        {!isFullscreen && width >= 360 && <RectangularMenu onSelect={handleMenuSelect} ttsActive={isTtsActive} ttsDisabled={book?.format === 'pdf' && !hasTextLayerForBook} reducedMotion={reducedMotion} />}
 
         <View style={styles.contentWrap}>
           <Pressable style={styles.content} onPress={() => setToolbarVisible(v => !v)} testID="reader-content-tap">
@@ -506,6 +520,7 @@ export function ReaderScreen() {
             onBookmarkPress={handleBookmarkToggle}
             onColorPress={() => setShowHighlightPicker(v => !v)}
             onMenuPress={() => useMenuStore.getState().toggle()}
+            reducedMotion={reducedMotion}
           />
         </View>
 
@@ -523,6 +538,7 @@ export function ReaderScreen() {
         />
         <PagesGrid visible={activePanel === 'pages'} totalPages={totalPages} currentPage={currentPage} onClose={() => setActivePanel(null)} onSelect={handleScrub as any} />
         <ThemePanel visible={activePanel === 'font'} onClose={() => setActivePanel(null)} />
+        <ProgressSheet visible={activePanel === 'progress'} bookId={bookId} totalPages={totalPages} onClose={() => setActivePanel(null)} />
         <HighlightsPanel visible={activePanel === 'highlights'} bookId={bookId} onClose={() => setActivePanel(null)} onSelect={handleHighlightTap} />
         <NotesPanel
           visible={activePanel === 'notes'}

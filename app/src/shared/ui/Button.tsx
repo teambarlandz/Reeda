@@ -27,7 +27,7 @@ export function Button({ title, onPress, variant = 'primary', disabled, testID }
     color: variant === 'ghost' ? t.textSecondary : t.buttonPrimaryText,
   };
   return (
-    <Pressable testID={testID} onPress={onPress} disabled={disabled} style={({ pressed }) => [containerStyle, pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]}>
+    <Pressable testID={testID} onPress={onPress} disabled={disabled} style={({ pressed }) => [containerStyle, pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] }]} accessibilityLabel={title} accessibilityRole="button">
       <Text style={textStyle}>{title}</Text>
     </Pressable>
   );

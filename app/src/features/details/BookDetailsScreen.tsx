@@ -67,7 +67,7 @@ export function BookDetailsScreen() {
           <View style={[styles.fill, { backgroundColor: t.textPrimary, width: `${percent}%` }]} />
         </View>
 
-        <Button title="Open" onPress={() => navigation.navigate('Reader', { bookId })} testID="open-reader" />
+        <Button title="Open" onPress={() => navigation.navigate('Reader', { bookId })} testID="open-reader" accessibilityLabel={`Open ${book.title}`} />
 
         <View style={{ marginTop: spacing.xl, width: '100%' }}>
           <Text style={[typography.title, { color: t.textPrimary, marginBottom: spacing.sm }]}>Shelves</Text>
@@ -80,6 +80,8 @@ export function BookDetailsScreen() {
                   queryClient.invalidateQueries({ queryKey: ['books'] });
                 }}
                 style={{ backgroundColor: t.bgSearch, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full }}
+                accessibilityLabel={`Assign to ${s.name}`}
+                accessibilityRole="button"
               >
                 <Text style={[typography.caption, { color: t.textSecondary }]}>{s.name}</Text>
               </TouchableOpacity>
@@ -88,6 +90,8 @@ export function BookDetailsScreen() {
               onPress={() => setShowShelves(true)}
               style={{ backgroundColor: t.bgCardDark, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full }}
               testID="manage-shelves"
+              accessibilityLabel="Create new shelf"
+              accessibilityRole="button"
             >
               <Text style={[typography.caption, { color: t.textInverse }]}>+ New Shelf</Text>
             </TouchableOpacity>
@@ -116,11 +120,13 @@ export function BookDetailsScreen() {
           }}
           style={{ marginTop: spacing.xl, backgroundColor: '#E53935', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.full }}
           testID="delete-book"
+          accessibilityLabel={`Delete ${book.title}`}
+          accessibilityRole="button"
         >
           <Text style={[typography.button, { color: '#FFFFFF' }]}>Delete Book</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: spacing.md }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: spacing.md }} accessibilityLabel="Go back" accessibilityRole="button">
           <Text style={[typography.caption, { color: t.textSecondary }]}>Back</Text>
         </TouchableOpacity>
         <ShelvesSheet visible={showShelves} onClose={() => setShowShelves(false)} bookId={bookId} />

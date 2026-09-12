@@ -64,7 +64,7 @@ export function TTSExpandedPlayer({ visible, onClose, onTogglePlay, onSkipBack, 
       <Pressable style={{ flex: 1 }} onPress={onClose} testID="tts-expanded-dim" />
       <View style={[styles.panel, { backgroundColor: t.bgCard }, elevation.lg]} testID="tts-expanded">
         <View style={styles.header}>
-          <Text style={[typography.heading, { color: t.textPrimary }]}>Read Aloud</Text>
+          <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Read Aloud</Text>
           <Pressable onPress={onClose} testID="tts-expanded-close">
             <X size={24} color={t.iconTint} />
           </Pressable>

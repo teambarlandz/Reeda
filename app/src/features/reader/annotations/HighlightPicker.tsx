@@ -22,7 +22,7 @@ export function HighlightPicker({ visible, selectedColor = '#FFEB3B', onSelect, 
     return (
       <View style={[styles.container, elevation.lg]} testID="highlight-picker">
         {onCopy && (
-          <Pressable onPress={onCopy} style={styles.miniBtn} testID="highlight-copy">
+          <Pressable onPress={onCopy} style={styles.miniBtn} testID="highlight-copy" accessibilityLabel="Copy highlight" accessibilityRole="button">
             <Copy size={16} color="#FFFFFF" />
             <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Copy</Text>
           </Pressable>
@@ -35,16 +35,18 @@ export function HighlightPicker({ visible, selectedColor = '#FFEB3B', onSelect, 
               onPress={() => onSelect(color)}
               style={[styles.circle, { backgroundColor: color, borderWidth: isSelected ? 2 : 0, borderColor: '#FFFFFF' }]}
               testID={`color-${color}`}
+              accessibilityLabel={`Highlight color ${color}${isSelected ? ', selected' : ''}`}
+              accessibilityRole="button"
             >
               {isSelected && <Check size={14} color="#FFFFFF" />}
             </Pressable>
           );
         })}
-        <Pressable onPress={onRemove} style={[styles.circle, { backgroundColor: '#1C1C1E' }]} testID="highlight-remove">
+        <Pressable onPress={onRemove} style={[styles.circle, { backgroundColor: '#1C1C1E' }]} testID="highlight-remove" accessibilityLabel="Remove highlight" accessibilityRole="button">
           <Trash2 size={16} color="#FFFFFF" />
         </Pressable>
         {onAddNote && (
-          <Pressable onPress={onAddNote} style={styles.miniBtn} testID="highlight-add-note">
+          <Pressable onPress={onAddNote} style={styles.miniBtn} testID="highlight-add-note" accessibilityLabel="Add note to highlight" accessibilityRole="button">
             <Pencil size={16} color="#FFFFFF" />
             <Text style={[typography.caption, { color: '#FFFFFF', marginLeft: 4 }]}>Note</Text>
           </Pressable>
@@ -55,23 +57,25 @@ export function HighlightPicker({ visible, selectedColor = '#FFEB3B', onSelect, 
   return (
     <View style={[styles.container, elevation.lg]} testID="highlight-picker">
       {HIGHLIGHT_COLORS.map(color => {
-        const isSelected = color === selectedColor;
-        return (
-          <Pressable
-            key={color}
-            onPress={() => onSelect(color)}
-            style={[styles.circle, { backgroundColor: color, borderWidth: isSelected ? 2 : 0, borderColor: '#FFFFFF' }]}
-            testID={`color-${color}`}
-          >
-            {isSelected && <Check size={14} color="#FFFFFF" />}
+          const isSelected = color === selectedColor;
+          return (
+            <Pressable
+              key={color}
+              onPress={() => onSelect(color)}
+              style={[styles.circle, { backgroundColor: color, borderWidth: isSelected ? 2 : 0, borderColor: '#FFFFFF' }]}
+              testID={`color-${color}`}
+              accessibilityLabel={`Highlight color ${color}${isSelected ? ', selected' : ''}`}
+              accessibilityRole="button"
+            >
+              {isSelected && <Check size={14} color="#FFFFFF" />}
+            </Pressable>
+          );
+        })}
+        {showRemove && (
+          <Pressable onPress={onRemove} style={[styles.circle, { backgroundColor: '#1C1C1E' }]} testID="highlight-remove" accessibilityLabel="Remove highlight" accessibilityRole="button">
+            <Trash2 size={16} color="#FFFFFF" />
           </Pressable>
-        );
-      })}
-      {showRemove && (
-        <Pressable onPress={onRemove} style={[styles.circle, { backgroundColor: '#1C1C1E' }]} testID="highlight-remove">
-          <Trash2 size={16} color="#FFFFFF" />
-        </Pressable>
-      )}
+        )}
     </View>
   );
 }

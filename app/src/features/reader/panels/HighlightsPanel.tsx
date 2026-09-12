@@ -39,7 +39,7 @@ export function HighlightsPanel({ visible, bookId, onClose, onSelect }: Props) {
       <Pressable style={{ flex: 1 }} onPress={onClose} />
       <View style={[styles.panel, { backgroundColor: t.bgCard, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }]}>
         <View style={styles.header}>
-          <Text style={[typography.heading, { color: t.textPrimary }]}>Highlights</Text>
+          <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Highlights</Text>
           <Pressable onPress={onClose} testID="highlights-close">
             <X size={24} color={t.iconTint} />
           </Pressable>

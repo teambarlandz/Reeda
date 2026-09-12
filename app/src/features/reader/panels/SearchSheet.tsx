@@ -53,6 +53,7 @@ export function SearchSheet({ visible, bookTitle, rawTextPerChapter, onClose, on
       <Pressable style={{ flex: 1 }} onPress={onClose} />
       <View style={[styles.panel, { backgroundColor: t.bgCard, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }]}>
         <View style={styles.header}>
+          <Text style={[typography.heading, { color: t.textPrimary }]} accessibilityRole="header">Search</Text>
           <View style={[styles.searchBar, { backgroundColor: t.bgSearch }]}>
             <Search size={16} color={t.iconTint} />
             <TextInput
@@ -60,17 +61,18 @@ export function SearchSheet({ visible, bookTitle, rawTextPerChapter, onClose, on
               placeholderTextColor={t.textSecondary}
               value={query}
               onChangeText={setQuery}
+              accessibilityLabel={`Search in ${bookTitle ?? 'book'}`}
               style={[typography.body, { color: t.textPrimary, flex: 1, marginLeft: spacing.sm, paddingVertical: 0 }]}
               autoFocus
               testID="search-in-book"
             />
             {query.length > 0 && (
-              <Pressable onPress={() => setQuery('')}>
+              <Pressable onPress={() => setQuery('')} accessibilityLabel="Clear search" accessibilityRole="button">
                 <X size={16} color={t.iconTint} />
               </Pressable>
             )}
           </View>
-          <Pressable onPress={onClose} testID="search-sheet-close">
+          <Pressable onPress={onClose} testID="search-sheet-close" accessibilityLabel="Close search" accessibilityRole="button">
             <X size={24} color={t.iconTint} />
           </Pressable>
         </View>

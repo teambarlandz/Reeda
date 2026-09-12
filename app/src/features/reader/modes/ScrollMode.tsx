@@ -165,8 +165,8 @@ export function ScrollMode({ chapters, highlights = [], notes = [], onScroll, sc
     return (
       <View key={ch.id} style={{ marginBottom: 24, flexDirection: 'row' }}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.chapterTitle, { color: colors.text, fontSize: fontSize + 2, lineHeight: fontSize * 1.6 }]}>{ch.title}</Text>
-          <Pressable onLongPress={() => onLongPressText?.(ch.rawText.slice(0, 80))} delayLongPress={400} testID={`selectable-${ch.id}`}>
+          <Text style={[styles.chapterTitle, { color: colors.text, fontSize: fontSize + 2, lineHeight: fontSize * 1.6 }]} accessibilityRole="header">{ch.title}</Text>
+          <Pressable onLongPress={() => onLongPressText?.(ch.rawText.slice(0, 80))} delayLongPress={400} testID={`selectable-${ch.id}`} accessible accessibilityRole="text">
             <Text style={{ color: colors.text, fontSize, lineHeight: fontSize * lineHeight }}>
               <HighlightedText rawText={ch.rawText} highlights={chHighlights} isDark={isDark} onHighlightTap={handleHighlightTap} tappedId={tappedId} ttsSentence={isTtsChapter ? ttsSentence : null} ttsWordIndex={ttsWordIndex} ttsHighlightSync={ttsHighlightSync} />
             </Text>
