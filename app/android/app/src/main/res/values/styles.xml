@@ -4,6 +4,13 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+        <!-- Branded first frame before the splash Dialog renders (per phase-4.md M8-Ext D2). -->
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+
+    <!-- Shown by MainActivity before React boots (per phase-4.md M8-Ext D2). -->
+    <style name="SplashScreenTheme" parent="SplashScreen_SplashTheme">
+        <item name="android:windowBackground">@color/splash_background</item>
     </style>
 
 </resources>
