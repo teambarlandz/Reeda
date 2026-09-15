@@ -45,6 +45,9 @@ app/android/gradle.properties
 # Keep template gradle.properties but secrets are via GH Secrets + release.keystore (phase-5.md:3.4)
 !app/android/gradle.properties.template
 
+# Machine-specific SDK location (written by setup scripts / Android Studio)
+app/android/local.properties
+
 app/ios/build/
 app/ios/Pods/
 app/ios/*.xcworkspace
