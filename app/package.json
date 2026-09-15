@@ -12,12 +12,14 @@
     "sync-version": "node scripts/sync-version.js"
   },
   "dependencies": {
+    "@react-native-ml-kit/text-recognition": "^2.0.0",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
     "@tanstack/react-query": "^5.50.1",
     "crypto-js": "^4.2.0",
     "jszip": "^3.10.1",
     "lucide-react-native": "^0.400.0",
+    "pdfjs-dist": "^3.11.174",
     "react": "18.2.0",
     "react-native": "0.73.11",
     "react-native-blob-util": "^0.19.9",

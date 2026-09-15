@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions, ToastAndroid, Platform, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, useWindowDimensions, ToastAndroid, Platform, AccessibilityInfo, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAppTheme } from '../../../shared/theme/useTheme';
 import { useReducedMotion } from '../../../shared/hooks/useReducedMotion';
@@ -27,6 +27,10 @@ import { FullscreenController } from '../modes/FullscreenController';
 import { ScrollMode } from '../modes/ScrollMode';
 import { PaginateMode } from '../modes/PaginateMode';
 import { PdfView } from '../../../parsing/pdf/PdfView';
+import { extractPdfMetadata } from '../../../parsing/pdf/extractMetadata';
+import { ocrPdf, getPdfPageCount } from '../../../parsing/pdf/ocrText';
+import { pdfToChapters } from '../../../parsing/pdf/pdfToChapters';
+import { FileStorage } from '../../../data/files/FileStorage';
 import { TOCPanel } from '../panels/TOCPanel';
 import { PagesGrid } from '../panels/PagesGrid';
 import { ProgressStrip } from '../panels/ProgressStrip';
@@ -100,12 +104,24 @@ export function ReaderScreen() {
   const [dictDef, setDictDef] = useState<string | undefined>(undefined);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  // PDF text pipeline state (F6/F8/F11): parallel data layer for TTS/search/highlights
+  const [pdfChapters, setPdfChapters] = useState<ParsedChapter[]>([]);
+  const [pdfPageCount, setPdfPageCount] = useState<number | undefined>(undefined);
+  const [pdfTextStatus, setPdfTextStatus] = useState<'idle' | 'extracting' | 'ocr' | 'done' | 'failed'>('idle');
+  const [ocrProgress, setOcrProgress] = useState<{ currentPage: number; total: number }>({ currentPage: 0, total: 0 });
+
   const { data: book } = useQuery({ queryKey: ['book', bookId], queryFn: () => BookRepository.get(bookId) });
   const { data: chaptersDB } = useQuery({ queryKey: ['chapters', bookId], queryFn: () => ChapterRepository.list(bookId) });
   const { data: highlights } = useQuery({ queryKey: ['highlights', bookId], queryFn: () => HighlightRepository.list(bookId) });
   const { data: notes } = useQuery({ queryKey: ['notes', bookId], queryFn: () => NoteRepository.list(bookId) });
-  const parsedChapters: ParsedChapter[] = getSampleChapters(bookId) ?? (chaptersDB as any as ParsedChapter[]) ?? [];
-  const totalPages = Math.max(1, Math.ceil(parsedChapters.reduce((sum, c) => sum + c.rawText.length, 0) / 1200));
+  const baseChapters: ParsedChapter[] = getSampleChapters(bookId) ?? (chaptersDB as any as ParsedChapter[]) ?? [];
+  const isPdf = book?.format === 'pdf';
+  const isDocx = book?.format === 'docx';
+  // PDFs render via <PdfView> (visual) with pages as a parallel text layer (F6/F8)
+  const parsedChapters: ParsedChapter[] = isPdf && pdfChapters.length > 0 ? pdfChapters : baseChapters;
+  const totalPages = isPdf
+    ? Math.max(1, pdfPageCount ?? (pdfChapters.length > 0 ? pdfChapters.length : 1))
+    : Math.max(1, Math.ceil(parsedChapters.reduce((sum, c) => sum + c.rawText.length, 0) / 1200));
   const progressPercent = progress?.progressPercent ?? 0;
   const currentChapterId = progress?.currentChapterId ?? parsedChapters[0]?.id;
   const currentTtsChapterIndex = Math.max(0, parsedChapters.findIndex(c => c.id === currentChapterId));
@@ -113,7 +129,9 @@ export function ReaderScreen() {
   // TTS setup per phase-3-reader.md:3.9 and phase-4.md:M6
   const rawTextPerChapter = parsedChapters.map(c => c.rawText);
   const totalRawLength = rawTextPerChapter.join('').length;
-  const hasTextLayerForBook = totalRawLength > 200; // heuristic for scanned PDF / image-only
+  const hasTextLayerForBook = isPdf
+    ? pdfChapters.length > 0 && totalRawLength > 200
+    : totalRawLength > 200; // heuristic for scanned PDF / image-only
   const ttsStore = useTtsStore();
   const { isActive: isTtsActive, isPlaying: isTtsPlaying, isExpanded: isTtsExpanded, highlightSync: ttsHighlightSync, queue: ttsQueue, currentIndex: ttsIndex, currentWordIndex, engineAvailable, hasTextLayer } = ttsStore;
   const ttsCurrentSentence = isTtsActive && ttsHighlightSync ? ttsQueue[ttsIndex]?.text ?? null : null;
@@ -216,6 +234,69 @@ export function ReaderScreen() {
   useEffect(() => {
     BookmarkRepository.isBookmarked(bookId, currentPage).then(setIsBookmarked);
   }, [bookId, currentPage]);
+
+  // PDF text pipeline (F6/F8/F11): extract embedded text, or OCR scanned pages,
+  // producing ParsedChapter[] that feeds TTS/search/highlights like EPUBs.
+  useEffect(() => {
+    if (book?.format !== 'pdf' || !book?.filePath) return;
+    let cancelled = false;
+    const filePath = book.filePath;
+    (async () => {
+      try {
+        setPdfTextStatus('extracting');
+        const cachedExtract = await FileStorage.loadPdfTextCache(bookId, 'extract');
+        if (!cancelled && cachedExtract && cachedExtract.length > 0) {
+          setPdfChapters(pdfToChapters(cachedExtract, bookId));
+          setPdfPageCount(cachedExtract.length);
+          setPdfTextStatus('done');
+          return;
+        }
+        const meta = await extractPdfMetadata(book.title ?? bookId, filePath, undefined, (page, total) => {
+          if (!cancelled) setOcrProgress({ currentPage: page, total });
+        });
+        if (cancelled) return;
+        if (meta.hasTextLayer && meta.pageTexts.length > 0) {
+          await FileStorage.savePdfTextCache(bookId, 'extract', meta.pageTexts);
+          if (cancelled) return;
+          setPdfChapters(pdfToChapters(meta.pageTexts, bookId));
+          setPdfPageCount(meta.pageTexts.length);
+          setPdfTextStatus('done');
+          return;
+        }
+        const cachedOcr = await FileStorage.loadPdfTextCache(bookId, 'ocr');
+        if (!cancelled && cachedOcr && cachedOcr.length > 0) {
+          setPdfChapters(pdfToChapters(cachedOcr, bookId));
+          setPdfPageCount(cachedOcr.length);
+          setPdfTextStatus('done');
+          return;
+        }
+        setPdfTextStatus('ocr');
+        const pageCount = await getPdfPageCount(filePath);
+        if (cancelled) return;
+        if (pageCount <= 0) {
+          setPdfTextStatus('failed');
+          return;
+        }
+        setOcrProgress({ currentPage: 0, total: pageCount });
+        const ocrResult = await ocrPdf(filePath, pageCount, FileStorage.getOcrPageDir(bookId), p => {
+          if (!cancelled) setOcrProgress(p);
+        });
+        if (cancelled) return;
+        const pageTexts = ocrResult.pageTexts;
+        await FileStorage.savePdfTextCache(bookId, 'ocr', pageTexts);
+        if (cancelled) return;
+        setPdfChapters(pdfToChapters(pageTexts, bookId));
+        setPdfPageCount(pageCount);
+        setPdfTextStatus('done');
+      } catch {
+        if (!cancelled) setPdfTextStatus(s => (s === 'done' ? s : 'failed'));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book?.format, book?.filePath, book?.title, bookId]);
 
   // Auto-hide toolbar (not when TTS active — keep combined chrome visible)
   useEffect(() => {
@@ -425,8 +506,6 @@ export function ReaderScreen() {
   const { width, height } = useWindowDimensions();
   const isLandscapeSystem = width > height;
   const isLandscape = orientation === 'landscape' ? true : orientation === 'portrait' ? false : isLandscapeSystem;
-  const isPdf = book?.format === 'pdf';
-  const isDocx = book?.format === 'docx';
 
   return (
     <FullscreenController>
@@ -436,7 +515,27 @@ export function ReaderScreen() {
         <View style={styles.contentWrap}>
           <Pressable style={styles.content} onPress={() => setToolbarVisible(v => !v)} testID="reader-content-tap">
             {isPdf ? (
-              <PdfView source={{ uri: book?.filePath ?? '' }} page={currentPage} onPageChanged={(p, n) => handleScrub(p / n)} hasTextLayer={hasTextLayerForBook} />
+              <>
+                <PdfView
+                  source={{ uri: book?.filePath ?? '' }}
+                  page={currentPage}
+                  onPageChanged={(p, n) => handleScrub(p / n)}
+                  onLoadComplete={n => setPdfPageCount(n)}
+                  hasTextLayer={hasTextLayerForBook}
+                />
+                {pdfTextStatus !== 'idle' && pdfTextStatus !== 'done' && (
+                  <View style={[styles.pdfTextOverlay, { backgroundColor: t.bgPrimary }]} pointerEvents="none" testID="pdf-text-progress">
+                    {pdfTextStatus === 'ocr' && <ActivityIndicator size="large" color={t.textPrimary} />}
+                    <Text style={[styles.pdfTextOverlayLabel, { color: t.textPrimary }]}>
+                      {pdfTextStatus === 'ocr'
+                        ? `Recognizing text... ${ocrProgress.total > 0 ? `Page ${ocrProgress.currentPage}/${ocrProgress.total}` : ''}`
+                        : pdfTextStatus === 'failed'
+                          ? 'Could not extract text from this PDF'
+                          : 'Reading text...'}
+                    </Text>
+                  </View>
+                )}
+              </>
             ) : isDocx ? (
               <View style={styles.centered}>
                 <Text style={[typography.body, { color: t.textSecondary, textAlign: 'center' }]}>DOCX preview coming soon</Text>
@@ -611,6 +710,8 @@ const styles = StyleSheet.create({
   backBtn: { position: 'absolute', top: 40, left: 20, paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: 9999 },
   selectionWrap: { position: 'absolute', top: 80, left: 0, right: 0, alignItems: 'center', zIndex: 15 },
   demoSelectionLayer: { position: 'absolute', top: 40, left: 10, right: 10, opacity: 0.01 },
+  pdfTextOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 24 },
+  pdfTextOverlayLabel: { fontSize: 14, textAlign: 'center' },
   bookmarkFloat: { position: 'absolute', top: 16, right: 16, zIndex: 12 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 } as any);

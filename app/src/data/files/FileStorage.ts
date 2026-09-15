@@ -129,6 +129,51 @@ export const FileStorage = {
     return coverPath ?? null;
   },
 
+  // --- PDF text cache (F11) --------------------------------------------------
+
+  getPdfCacheDir(): string {
+    return `${FileStorage.getAppPrivateDir()}/pdf_cache`;
+  },
+
+  getOcrPageDir(bookId: string): string {
+    return `${FileStorage.getAppPrivateDir()}/ocr_pages/${bookId}`;
+  },
+
+  async savePdfTextCache(bookId: string, kind: 'extract' | 'ocr', pageTexts: string[]): Promise<void> {
+    try {
+      const dir = FileStorage.getPdfCacheDir();
+      if (!(await RNFS.exists(dir))) await RNFS.mkdir(dir);
+      const json = JSON.stringify({ bookId, kind, pageTexts, savedAt: Date.now() });
+      await RNFS.writeFile(`${dir}/${bookId}_${kind}.json`, json, 'utf8');
+    } catch {}
+  },
+
+  async loadPdfTextCache(bookId: string, kind: 'extract' | 'ocr'): Promise<string[] | null> {
+    try {
+      const p = `${FileStorage.getPdfCacheDir()}/${bookId}_${kind}.json`;
+      if (!(await RNFS.exists(p))) return null;
+      const raw = await RNFS.readFile(p, 'utf8');
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed.pageTexts) ? parsed.pageTexts : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async clearPdfCaches(bookId: string): Promise<void> {
+    try {
+      const dirs = [
+        `${FileStorage.getPdfCacheDir()}/${bookId}_extract.json`,
+        `${FileStorage.getPdfCacheDir()}/${bookId}_ocr.json`,
+      ];
+      const ocrDir = FileStorage.getOcrPageDir(bookId);
+      if (await RNFS.exists(ocrDir)) await RNFS.unlink(ocrDir);
+      for (const p of dirs) {
+        if (await RNFS.exists(p)) await RNFS.unlink(p);
+      }
+    } catch {}
+  },
+
   async deleteBookFiles(bookId: string, ext: string): Promise<void> {
     try {
       const bookPath = `${FileStorage.getAppPrivateDir()}/${bookId}.${ext}`;
@@ -137,6 +182,7 @@ export const FileStorage = {
       if (existsBook) await RNFS.unlink(bookPath);
       const existsCover = await RNFS.exists(coverPath);
       if (existsCover) await RNFS.unlink(coverPath);
+      await FileStorage.clearPdfCaches(bookId);
     } catch {}
   },
 };

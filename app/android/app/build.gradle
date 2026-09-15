@@ -116,12 +116,23 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    kotlinOptions {
+        // react-native-pdf pins io.legere:pdfiumandroid:1.0.24, which is compiled with
+        // Kotlin 2.0.0 metadata. This module compiles with the project's Kotlin 1.8.0.
+        // Match the compiler's own mitigation rather than bumping the whole toolchain.
+        freeCompilerArgs += "-Xskip-metadata-version-check"
+    }
 }
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation("com.facebook.react:flipper-integration")
+
+    // Pdfium page renderer for PDF text fallback + OCR page images (F2/F3).
+    // Same artifact react-native-pdf already bundles, so no version conflict.
+    implementation("io.legere:pdfiumandroid:1.0.24")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

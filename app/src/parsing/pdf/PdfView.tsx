@@ -13,6 +13,10 @@ type Props = {
 
 // View-level colorFilter per phase-3-reader.md:3.3 Option A — simple invert
 // GPU shader: invert(1) hue-rotate(180deg) — negligible perf, same FPS
+//
+// F7 note: react-native-pdf@6.7.x exposes no onText/onTextContent prop, so the
+// extracted-text data layer is produced by pdfjs-dist (extractText.ts) instead.
+// <Pdf> stays the visual renderer; extracted text is a parallel data layer.
 export function PdfView({ source, page = 1, onPageChanged, onLoadComplete, hasTextLayer = true }: Props) {
   const { theme, pdfDarkMode } = useReaderStore();
   const isDarkTheme = theme === 'dark' || theme === 'midnight' || theme === 'custom';
