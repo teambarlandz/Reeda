@@ -1,14 +1,13 @@
 // Simple keep-awake helper per phase-3-reader.md:3.1 Fullscreen Mode
-// Real native is react-native-keep-awake; fallback to no-op in JS/Tests
+import KeepAwake from 'react-native-keep-awake';
+
 let active = false;
 let timeout: ReturnType<typeof setTimeout> | null = null;
 
 export function activateKeepAwake() {
   active = true;
   try {
-    // Try native module if available
-    const KeepAwake = require('react-native-keep-awake');
-    if (KeepAwake?.activateKeepAwake) KeepAwake.activateKeepAwake();
+    KeepAwake.activate();
   } catch {}
 }
 
@@ -16,8 +15,7 @@ export function deactivateKeepAwake() {
   active = false;
   if (timeout) clearTimeout(timeout);
   try {
-    const KeepAwake = require('react-native-keep-awake');
-    if (KeepAwake?.deactivateKeepAwake) KeepAwake.deactivateKeepAwake();
+    KeepAwake.deactivate();
   } catch {}
 }
 

@@ -8,7 +8,7 @@ import { ReadingGoalRow } from '../components/ReadingGoalRow';
 import { StorageManagement } from '../components/StorageManagement';
 import { ChevronLeft } from '../../../shared/icons';
 
-const { version: APP_VERSION } = require('../../package.json');
+const { version: APP_VERSION } = require('../../../../package.json');
 const CONTENT_NOTICE = "Only import books you have the right to read. This app does not provide books and does not bypass copy protection.";
 const PRIVACY_POLICY = "This app works offline and stores your books and reading data only on your device. We do not collect, upload, or share your books, highlights, notes, or reading progress. Search queries and recent searches are stored only on your device and never uploaded. You can clear them in Search → Recent searches → Clear. If crash reporting is enabled in a future update, this policy will be updated to describe it.";
 const TERMS_OF_SERVICE = "This app is a reading tool; you are responsible for having rights to files you import. No warranty for file parsing — corrupt or DRM-protected files may fail to open. Samples are public domain and may be removed by the user. Contact support@reeda.app for takedown or legal inquiries.";

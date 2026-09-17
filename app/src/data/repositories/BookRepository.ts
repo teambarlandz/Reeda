@@ -90,7 +90,7 @@ export const BookRepository = {
     try {
       const res: any = await db.execute(
         `SELECT b.*, rank FROM books_fts
-         JOIN books b ON b.id = books_fts.rowid
+         JOIN books b ON b.id = books_fts.bookId
          WHERE books_fts MATCH ?
          ORDER BY rank
          LIMIT ?;`,

@@ -7,13 +7,26 @@ type Db = {
 };
 
 async function execAll(db: Db, sql: string) {
-  const statements = sql
-    .split(';')
-    .map(s => s.trim())
-    .filter(Boolean);
+  // Split on semicolons that are NOT inside BEGIN...END blocks (triggers, functions).
+  const statements: string[] = [];
+  let current = '';
+  let depth = 0;
+  for (const line of sql.split('\n')) {
+    const upper = line.toUpperCase();
+    if (upper.includes('BEGIN')) depth++;
+    if (upper.includes('END')) depth = Math.max(0, depth - 1);
+    current += line + '\n';
+    if (line.trim().endsWith(';') && depth === 0) {
+      const trimmed = current.trim();
+      if (trimmed) statements.push(trimmed);
+      current = '';
+    }
+  }
+  if (current.trim()) statements.push(current.trim());
+
   for (const stmt of statements) {
     // eslint-disable-next-line no-await-in-loop
-    await db.execute(`${stmt};`);
+    await db.execute(`${stmt}`);
   }
 }
 
@@ -43,7 +56,7 @@ export async function runMigrations(db: Db) {
       if (m.name === '002_fts') {
         // eslint-disable-next-line no-await-in-loop
         await db.execute(`
-          INSERT INTO books_fts(rowid, title, author, genre, shelfNames, fileName)
+          INSERT INTO books_fts(bookId, title, author, genre, shelfNames, fileName)
           SELECT id, title, author, '', '', originalFileName FROM books;
         `);
       }
